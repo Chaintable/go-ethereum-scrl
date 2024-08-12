@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/scroll-tech/go-ethereum/accounts"
 	"github.com/scroll-tech/go-ethereum/common"
@@ -1025,4 +1026,80 @@ func TestPending(t *testing.T) {
 	pending := w.pendingBlock()
 	assert.NotNil(t, pending)
 	assert.NotEmpty(t, pending.Transactions())
+}
+
+func TestReorg(t *testing.T) {
+	var (
+		engine      consensus.Engine
+		chainConfig *params.ChainConfig
+		db          = rawdb.NewMemoryDatabase()
+	)
+	chainConfig = params.AllCliqueProtocolChanges
+	chainConfig.Clique = &params.CliqueConfig{Period: 1, Epoch: 30000, RelaxedPeriod: true}
+	chainConfig.Scroll.FeeVaultAddress = &common.Address{}
+	engine = clique.New(chainConfig.Clique, db)
+
+	maxTxPerBlock := 2
+	chainConfig.Scroll.MaxTxPerBlock = &maxTxPerBlock
+	chainConfig.Scroll.L1Config = &params.L1Config{
+		NumL1MessagesPerBlock: 10,
+	}
+
+	chainConfig.LondonBlock = big.NewInt(0)
+	w, b := newTestWorker(t, chainConfig, engine, db, 0)
+	defer w.close()
+
+	// This test chain imports the mined blocks.
+	b.genesis.MustCommit(db)
+	chain, _ := core.NewBlockChain(db, nil, b.chain.Config(), engine, vm.Config{
+		Debug:  true,
+		Tracer: vm.NewStructLogger(&vm.LogConfig{EnableMemory: true, EnableReturnData: true})}, nil, nil)
+	defer chain.Stop()
+
+	// Insert local tx
+	for i := 0; i < 40; i++ {
+		b.txPool.AddLocal(b.newRandomTx(true))
+	}
+
+	const firstReorgHeight = 5
+	w.asyncChecker.ScheduleError(firstReorgHeight, 1)
+
+	// Start mining!
+	w.start()
+
+	// Wait for mined blocks.
+	sub := w.mux.Subscribe(core.NewMinedBlockEvent{})
+	defer sub.Unsubscribe()
+
+	var oldBlock *types.Block
+	var newBlock *types.Block
+
+firstReorg:
+	for {
+		select {
+		case ev := <-sub.Chan():
+			block := ev.Data.(core.NewMinedBlockEvent).Block
+			if block.NumberU64() == firstReorgHeight {
+				if oldBlock == nil {
+					oldBlock = block
+				} else {
+					newBlock = block
+					break firstReorg
+				}
+			}
+		case <-time.After(3 * time.Second): // Worker needs 1s to include new changes.
+			t.Fatalf("timeout")
+		}
+	}
+
+	require.Equal(t, oldBlock.NumberU64(), newBlock.NumberU64())
+	require.Equal(t, oldBlock.Transactions()[:1], newBlock.Transactions())
+
+	w.asyncChecker.ScheduleError(25, 1)
+	// Insert local tx
+	for i := 0; i < 40; i++ {
+		b.txPool.AddLocal(b.newRandomTx(true))
+	}
+	time.Sleep(time.Second * 5)
+
 }

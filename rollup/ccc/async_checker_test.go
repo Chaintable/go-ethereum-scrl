@@ -67,7 +67,7 @@ func TestAsyncChecker(t *testing.T) {
 		failingBlockHash = b.Hash()
 		var errWithIdx *ErrorWithTxnIdx
 		if errors.As(err, &errWithIdx) {
-			errIdx = errWithIdx.txIdx
+			errIdx = errWithIdx.TxIdx
 		}
 	})
 

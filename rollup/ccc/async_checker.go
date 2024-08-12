@@ -41,15 +41,19 @@ type AsyncChecker struct {
 
 	workers      *stream.Stream
 	freeCheckers chan *Checker
+
+	// tests
+	blockNumberToFail uint64
+	txnIdxToFail      uint64
 }
 
 type ErrorWithTxnIdx struct {
-	txIdx uint
+	TxIdx uint
 	err   error
 }
 
 func (e *ErrorWithTxnIdx) Error() string {
-	return fmt.Sprintf("txn at index %d failed with %s", e.txIdx, e.err)
+	return fmt.Sprintf("txn at index %d failed with %s", e.TxIdx, e.err)
 }
 
 func (e *ErrorWithTxnIdx) Unwrap() error {
@@ -110,6 +114,15 @@ func (c *AsyncChecker) checkerTask(block *types.Block, ccc *Checker) stream.Call
 		}
 	}
 
+	if c.blockNumberToFail == block.NumberU64() {
+		err = &ErrorWithTxnIdx{
+			TxIdx: uint(c.txnIdxToFail),
+			err:   err,
+		}
+		c.blockNumberToFail = 0
+		return failingCallback
+	}
+
 	statedb, err := c.bc.StateAt(parent.Root())
 	if err != nil {
 		return failingCallback
@@ -125,7 +138,7 @@ func (c *AsyncChecker) checkerTask(block *types.Block, ccc *Checker) stream.Call
 		rc, err = c.checkTxAndApply(parent, header, statedb, gasPool, tx, ccc)
 		if err != nil {
 			err = &ErrorWithTxnIdx{
-				txIdx: uint(txIdx),
+				TxIdx: uint(txIdx),
 				err:   err,
 			}
 			return failingCallback
@@ -172,4 +185,10 @@ func (c *AsyncChecker) checkTxAndApply(parent *types.Block, header *types.Header
 		return nil, err
 	}
 	return rc, nil
+}
+
+// ScheduleError forces a block to error on a given transaction index
+func (c *AsyncChecker) ScheduleError(blockNumber uint64, txnIndx uint64) {
+	c.blockNumberToFail = blockNumber
+	c.txnIdxToFail = txnIndx
 }
