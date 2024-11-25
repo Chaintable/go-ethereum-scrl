@@ -133,11 +133,6 @@ func (t *ProofTracer) Prove(key []byte, proofDb ethdb.KeyValueWriter) error {
 
 			switch n.Type {
 			case trie.NodeTypeLeaf_New:
-				preImage := t.trie.GetKey(n.NodeKey.Bytes())
-				if len(preImage) > 0 {
-					n.KeyPreimage = &trie.Byte32{}
-					copy(n.KeyPreimage[:], preImage)
-				}
 			case trie.NodeTypeBranch_0, trie.NodeTypeBranch_1,
 				trie.NodeTypeBranch_2, trie.NodeTypeBranch_3:
 				mptPath = append(mptPath, n)
