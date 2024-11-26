@@ -1198,6 +1198,11 @@ func (mt *ZkTrie) prove(kHash *Hash, fromLevel uint, writeNode func(*Node) error
 		case NodeTypeLeaf_New:
 			// notice even we found a leaf whose entry didn't match the expected k,
 			// we still include it as the proof of absence
+			preImage := mt.getKey(n.NodeKey.Bytes())
+			if len(preImage) > 0 {
+				n.KeyPreimage = &Byte32{}
+				copy(n.KeyPreimage[:], preImage)
+			}
 		case NodeTypeBranch_0, NodeTypeBranch_1, NodeTypeBranch_2, NodeTypeBranch_3:
 			finished = false
 			if path[i] {
