@@ -18,7 +18,7 @@ func TestL1Client(t *testing.T) {
 	ctx := context.Background()
 	mockClient := &mockEthClient{}
 
-	scrollChainABI, err := scrollChainMetaData.GetAbi()
+	scrollChainABI, err := ScrollChainMetaData.GetAbi()
 	if err != nil {
 		t.Fatal("failed to get scroll chain abi", "err", err)
 	}
