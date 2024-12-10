@@ -1850,7 +1850,7 @@ func (bc *BlockChain) BuildAndWriteBlock(parentBlock *types.Block, header *types
 		l.BlockHash = blockHash
 	}
 
-	return bc.writeBlockAndSetHead(fullBlock, receipts, logs, statedb, false)
+	return bc.writeBlockWithState(fullBlock, receipts, logs, statedb, false)
 }
 
 // insertSideChain is called when an import batch hits upon a pruned ancestor

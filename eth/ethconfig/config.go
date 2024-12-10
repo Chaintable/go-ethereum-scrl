@@ -94,9 +94,6 @@ var Defaults = Config{
 	GPO:           FullNodeGPO,
 	RPCTxFeeCap:   1,  // 1 ether
 	MaxBlockRange: -1, // Default unconfigured value: no block range limit for backward compatibility
-	DA: da_syncer.Config{
-		FetcherMode: da_syncer.L1RPC,
-	},
 }
 
 func init() {

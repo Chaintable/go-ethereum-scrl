@@ -21,11 +21,9 @@ import (
 
 // Config is the configuration parameters of data availability syncing.
 type Config struct {
-	FetcherMode            FetcherMode // mode of fetcher
-	SnapshotFilePath       string      // path to snapshot file
-	BlobScanAPIEndpoint    string      // BlobScan blob api endpoint
-	BlockNativeAPIEndpoint string      // BlockNative blob api endpoint
-	BeaconNodeAPIEndpoint  string      // Beacon node api endpoint
+	BlobScanAPIEndpoint    string // BlobScan blob api endpoint
+	BlockNativeAPIEndpoint string // BlockNative blob api endpoint
+	BeaconNodeAPIEndpoint  string // Beacon node api endpoint
 }
 
 // SyncingPipeline is a derivation pipeline for syncing data from L1 and DA and transform it into

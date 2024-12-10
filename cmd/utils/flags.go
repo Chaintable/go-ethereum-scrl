@@ -74,7 +74,6 @@ import (
 	"github.com/scroll-tech/go-ethereum/p2p/nat"
 	"github.com/scroll-tech/go-ethereum/p2p/netutil"
 	"github.com/scroll-tech/go-ethereum/params"
-	"github.com/scroll-tech/go-ethereum/rollup/da_syncer"
 	"github.com/scroll-tech/go-ethereum/rollup/tracing"
 	"github.com/scroll-tech/go-ethereum/rpc"
 )
@@ -1627,12 +1626,6 @@ func setEnableRollupVerify(ctx *cli.Context, cfg *ethconfig.Config) {
 func setDA(ctx *cli.Context, cfg *ethconfig.Config) {
 	if ctx.IsSet(DASyncEnabledFlag.Name) {
 		cfg.EnableDASyncing = ctx.Bool(DASyncEnabledFlag.Name)
-		if ctx.IsSet(DAModeFlag.Name) {
-			cfg.DA.FetcherMode = *flags.GlobalTextMarshaler(ctx, DAModeFlag.Name).(*da_syncer.FetcherMode)
-		}
-		if ctx.IsSet(DASnapshotFileFlag.Name) {
-			cfg.DA.SnapshotFilePath = ctx.String(DASnapshotFileFlag.Name)
-		}
 		if ctx.IsSet(DABlobScanAPIEndpointFlag.Name) {
 			cfg.DA.BlobScanAPIEndpoint = ctx.String(DABlobScanAPIEndpointFlag.Name)
 		}
