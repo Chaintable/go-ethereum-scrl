@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/scroll-tech/da-codec/encoding"
+
 	"github.com/scroll-tech/go-ethereum/accounts/abi"
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/core/types"
