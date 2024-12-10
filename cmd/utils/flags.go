@@ -74,6 +74,7 @@ import (
 	"github.com/scroll-tech/go-ethereum/p2p/nat"
 	"github.com/scroll-tech/go-ethereum/p2p/netutil"
 	"github.com/scroll-tech/go-ethereum/params"
+	"github.com/scroll-tech/go-ethereum/rollup/da_syncer"
 	"github.com/scroll-tech/go-ethereum/rollup/tracing"
 	"github.com/scroll-tech/go-ethereum/rpc"
 )
@@ -871,6 +872,28 @@ var (
 		Name:  "net.shadowforkpeers",
 		Usage: "peer ids of shadow fork peers",
 	}
+
+	// DA syncing settings
+	DASyncEnabledFlag = &cli.BoolFlag{
+		Name:  "da.sync",
+		Usage: "Enable node syncing from DA",
+	}
+	DASnapshotFileFlag = &cli.StringFlag{
+		Name:  "da.snapshot.file",
+		Usage: "Snapshot file to sync from DA",
+	}
+	DABlobScanAPIEndpointFlag = &cli.StringFlag{
+		Name:  "da.blob.blobscan",
+		Usage: "BlobScan blob API endpoint",
+	}
+	DABlockNativeAPIEndpointFlag = &cli.StringFlag{
+		Name:  "da.blob.blocknative",
+		Usage: "BlockNative blob API endpoint",
+	}
+	DABeaconNodeAPIEndpointFlag = &cli.StringFlag{
+		Name:  "da.blob.beaconnode",
+		Usage: "Beacon node API endpoint",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -1315,6 +1338,10 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setSmartCard(ctx, cfg)
 	setL1(ctx, cfg)
 
+	if ctx.IsSet(DASyncEnabledFlag.Name) {
+		cfg.DaSyncingEnabled = ctx.Bool(DASyncEnabledFlag.Name)
+	}
+
 	if ctx.GlobalIsSet(ExternalSignerFlag.Name) {
 		cfg.ExternalSigner = ctx.GlobalString(ExternalSignerFlag.Name)
 	}
@@ -1597,6 +1624,27 @@ func setEnableRollupVerify(ctx *cli.Context, cfg *ethconfig.Config) {
 	}
 }
 
+func setDA(ctx *cli.Context, cfg *ethconfig.Config) {
+	if ctx.IsSet(DASyncEnabledFlag.Name) {
+		cfg.EnableDASyncing = ctx.Bool(DASyncEnabledFlag.Name)
+		if ctx.IsSet(DAModeFlag.Name) {
+			cfg.DA.FetcherMode = *flags.GlobalTextMarshaler(ctx, DAModeFlag.Name).(*da_syncer.FetcherMode)
+		}
+		if ctx.IsSet(DASnapshotFileFlag.Name) {
+			cfg.DA.SnapshotFilePath = ctx.String(DASnapshotFileFlag.Name)
+		}
+		if ctx.IsSet(DABlobScanAPIEndpointFlag.Name) {
+			cfg.DA.BlobScanAPIEndpoint = ctx.String(DABlobScanAPIEndpointFlag.Name)
+		}
+		if ctx.IsSet(DABlockNativeAPIEndpointFlag.Name) {
+			cfg.DA.BlockNativeAPIEndpoint = ctx.String(DABlockNativeAPIEndpointFlag.Name)
+		}
+		if ctx.IsSet(DABeaconNodeAPIEndpointFlag.Name) {
+			cfg.DA.BeaconNodeAPIEndpoint = ctx.String(DABeaconNodeAPIEndpointFlag.Name)
+		}
+	}
+}
+
 func setMaxBlockRange(ctx *cli.Context, cfg *ethconfig.Config) {
 	if ctx.GlobalIsSet(MaxBlockRangeFlag.Name) {
 		cfg.MaxBlockRange = ctx.GlobalInt64(MaxBlockRangeFlag.Name)
@@ -1672,6 +1720,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	setLes(ctx, cfg)
 	setCircuitCapacityCheck(ctx, cfg)
 	setEnableRollupVerify(ctx, cfg)
+	setDA(ctx, cfg)
 	setMaxBlockRange(ctx, cfg)
 	if ctx.GlobalIsSet(ShadowforkPeersFlag.Name) {
 		cfg.ShadowForkPeerIDs = ctx.GlobalStringSlice(ShadowforkPeersFlag.Name)

@@ -125,6 +125,9 @@ var (
 	numSkippedTransactionsKey    = []byte("NumberOfSkippedTransactions")
 	skippedTransactionPrefix     = []byte("skip") // skippedTransactionPrefix + tx hash -> skipped transaction
 	skippedTransactionHashPrefix = []byte("sh")   // skippedTransactionHashPrefix + index -> tx hash
+
+	// Scroll da syncer store
+	daSyncedL1BlockNumberKey = []byte("LastDASyncedL1BlockNumber")
 )
 
 // Use the updated "L1" prefix on all new networks
