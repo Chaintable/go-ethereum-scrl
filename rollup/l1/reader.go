@@ -21,7 +21,6 @@ const (
 	nextUnfinalizedQueueIndex = "nextUnfinalizedQueueIndex"
 	lastFinalizedBatchIndex   = "lastFinalizedBatchIndex"
 
-	defaultL1MsgFetchBlockRange        = 500
 	defaultRollupEventsFetchBlockRange = 100
 )
 

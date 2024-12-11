@@ -8,7 +8,6 @@ import (
 	"github.com/scroll-tech/da-codec/encoding"
 
 	"github.com/scroll-tech/go-ethereum/accounts/abi"
-	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/ethdb"
 	"github.com/scroll-tech/go-ethereum/rollup/da_syncer/blob_client"
 	"github.com/scroll-tech/go-ethereum/rollup/da_syncer/serrors"
@@ -16,15 +15,7 @@ import (
 )
 
 const (
-	callDataBlobSourceFetchBlockRange  uint64 = 500
-	commitBatchEventName                      = "CommitBatch"
-	revertBatchEventName                      = "RevertBatch"
-	finalizeBatchEventName                    = "FinalizeBatch"
-	commitBatchMethodName                     = "commitBatch"
-	commitBatchWithBlobProofMethodName        = "commitBatchWithBlobProof"
-
-	// the length of method ID at the beginning of transaction data
-	methodIDLength = 4
+	callDataBlobSourceFetchBlockRange uint64 = 500
 )
 
 var (
@@ -32,15 +23,12 @@ var (
 )
 
 type CalldataBlobSource struct {
-	ctx                           context.Context
-	l1Reader                      *l1.Reader
-	blobClient                    blob_client.BlobClient
-	l1height                      uint64
-	scrollChainABI                *abi.ABI
-	l1CommitBatchEventSignature   common.Hash
-	l1RevertBatchEventSignature   common.Hash
-	l1FinalizeBatchEventSignature common.Hash
-	db                            ethdb.Database
+	ctx            context.Context
+	l1Reader       *l1.Reader
+	blobClient     blob_client.BlobClient
+	l1height       uint64
+	scrollChainABI *abi.ABI
+	db             ethdb.Database
 
 	l1Finalized uint64
 }
@@ -51,15 +39,12 @@ func NewCalldataBlobSource(ctx context.Context, l1height uint64, l1Reader *l1.Re
 		return nil, fmt.Errorf("failed to get scroll chain abi: %w", err)
 	}
 	return &CalldataBlobSource{
-		ctx:                           ctx,
-		l1Reader:                      l1Reader,
-		blobClient:                    blobClient,
-		l1height:                      l1height,
-		scrollChainABI:                scrollChainABI,
-		l1CommitBatchEventSignature:   scrollChainABI.Events[commitBatchEventName].ID,
-		l1RevertBatchEventSignature:   scrollChainABI.Events[revertBatchEventName].ID,
-		l1FinalizeBatchEventSignature: scrollChainABI.Events[finalizeBatchEventName].ID,
-		db:                            db,
+		ctx:            ctx,
+		l1Reader:       l1Reader,
+		blobClient:     blobClient,
+		l1height:       l1height,
+		scrollChainABI: scrollChainABI,
+		db:             db,
 	}, nil
 }
 
