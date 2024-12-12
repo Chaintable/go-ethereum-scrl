@@ -26,7 +26,7 @@ type CalldataBlobSource struct {
 	ctx            context.Context
 	l1Reader       *l1.Reader
 	blobClient     blob_client.BlobClient
-	l1height       uint64
+	l1Height       uint64
 	scrollChainABI *abi.ABI
 	db             ethdb.Database
 
@@ -42,7 +42,7 @@ func NewCalldataBlobSource(ctx context.Context, l1height uint64, l1Reader *l1.Re
 		ctx:            ctx,
 		l1Reader:       l1Reader,
 		blobClient:     blobClient,
-		l1height:       l1height,
+		l1Height:       l1height,
 		scrollChainABI: scrollChainABI,
 		db:             db,
 	}, nil
@@ -50,7 +50,7 @@ func NewCalldataBlobSource(ctx context.Context, l1height uint64, l1Reader *l1.Re
 
 func (ds *CalldataBlobSource) NextData() (Entries, error) {
 	var err error
-	to := ds.l1height + callDataBlobSourceFetchBlockRange
+	to := ds.l1Height + callDataBlobSourceFetchBlockRange
 
 	// If there's not enough finalized blocks to request up to, we need to query finalized block number.
 	// Otherwise, we know that there's more finalized blocks than we want to request up to
@@ -64,25 +64,25 @@ func (ds *CalldataBlobSource) NextData() (Entries, error) {
 		to = min(to, ds.l1Finalized)
 	}
 
-	if ds.l1height > to {
+	if ds.l1Height > to {
 		return nil, ErrSourceExhausted
 	}
 
-	rollupEvents, err := ds.l1Reader.FetchRollupEventsInRange(ds.l1height, to)
+	rollupEvents, err := ds.l1Reader.FetchRollupEventsInRange(ds.l1Height, to)
 	if err != nil {
-		return nil, serrors.NewTemporaryError(fmt.Errorf("cannot get rollup events, l1height: %d, error: %v", ds.l1height, err))
+		return nil, serrors.NewTemporaryError(fmt.Errorf("cannot get rollup events, l1Height: %d, error: %v", ds.l1Height, err))
 	}
 	da, err := ds.processRollupEventsToDA(rollupEvents)
 	if err != nil {
 		return nil, serrors.NewTemporaryError(fmt.Errorf("failed to process rollup events to DA, error: %v", err))
 	}
 
-	ds.l1height = to + 1
+	ds.l1Height = to + 1
 	return da, nil
 }
 
 func (ds *CalldataBlobSource) L1Height() uint64 {
-	return ds.l1height
+	return ds.l1Height
 }
 
 func (ds *CalldataBlobSource) processRollupEventsToDA(rollupEvents l1.RollupEvents) (Entries, error) {
