@@ -30,7 +30,11 @@ func (c *BlockNativeClient) GetBlobByVersionedHashAndBlockNumber(ctx context.Con
 	if err != nil {
 		return nil, fmt.Errorf("failed to join path, err: %w", err)
 	}
-	resp, err := http.Get(path)
+	req, err := http.NewRequestWithContext(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create request, err: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("cannot do request, err: %w", err)
 	}

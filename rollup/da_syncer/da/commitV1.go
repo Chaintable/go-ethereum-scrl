@@ -52,7 +52,7 @@ func NewCommitBatchDAWithBlob(ctx context.Context, db ethdb.Database,
 	// compute blob versioned hash and compare with one from tx
 	c, err := kzg4844.BlobToCommitment(blob)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create blob commitment")
+		return nil, fmt.Errorf("failed to create blob commitment: %w", err)
 	}
 	blobVersionedHash := common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &c))
 	if blobVersionedHash != versionedHash {

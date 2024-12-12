@@ -37,6 +37,10 @@ func (s *DASyncer) SyncOneBlock(block *da.PartialBlock) error {
 	}
 
 	parentBlock := s.blockchain.GetBlockByNumber(currentBlock.Number().Uint64())
+	if parentBlock == nil {
+		return fmt.Errorf("parent block not found at height %d", currentBlock.Number().Uint64())
+	}
+
 	if _, err := s.blockchain.BuildAndWriteBlock(parentBlock, block.PartialHeader.ToHeader(), block.Transactions); err != nil {
 		return fmt.Errorf("failed building and writing block, number: %d, error: %v", block.PartialHeader.Number, err)
 	}

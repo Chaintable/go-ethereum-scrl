@@ -98,5 +98,6 @@ func (bq *BatchQueue) deleteBatch(batch da.Entry) {
 func (bq *BatchQueue) Reset(height uint64) {
 	bq.batches.Clear()
 	bq.batchesMap.Clear()
+	bq.lastFinalizedBatchIndex = 0
 	bq.DAQueue.Reset(height)
 }
