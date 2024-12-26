@@ -34,7 +34,9 @@ import (
 	"github.com/scroll-tech/go-ethereum/core"
 	"github.com/scroll-tech/go-ethereum/core/rawdb"
 	"github.com/scroll-tech/go-ethereum/core/state"
+	"github.com/scroll-tech/go-ethereum/core/stateless"
 	"github.com/scroll-tech/go-ethereum/core/types"
+	"github.com/scroll-tech/go-ethereum/crypto"
 	"github.com/scroll-tech/go-ethereum/internal/ethapi"
 	"github.com/scroll-tech/go-ethereum/log"
 	"github.com/scroll-tech/go-ethereum/rlp"
@@ -319,6 +321,106 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 		return state.Dump{}, err
 	}
 	return stateDb.RawDump(opts), nil
+}
+
+func (api *PublicDebugAPI) ExecutionWitness(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*ExecutionWitness, error) {
+	block, err := api.eth.APIBackend.BlockByNumberOrHash(ctx, blockNrOrHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve block: %w", err)
+	}
+	if block == nil {
+		return nil, fmt.Errorf("block not found: %s", blockNrOrHash.String())
+	}
+
+	witness, err := generateWitness(api.eth.blockchain, block)
+	return ToExecutionWitness(witness), err
+}
+
+func generateWitness(blockchain *core.BlockChain, block *types.Block) (*stateless.Witness, error) {
+	witness, err := stateless.NewWitness(block.Header(), blockchain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create witness: %w", err)
+	}
+
+	parentHeader := witness.Headers[0]
+	statedb, err := blockchain.StateAt(parentHeader.Root)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve parent state: %w", err)
+	}
+
+	statedb.StartPrefetcher("debug_execution_witness", witness)
+	defer statedb.StopPrefetcher()
+
+	receipts, _, usedGas, err := blockchain.Processor().Process(block, statedb, *blockchain.GetVMConfig())
+	if err != nil {
+		return nil, fmt.Errorf("failed to process block %d: %w", block.Number(), err)
+	}
+
+	if err := blockchain.Validator().ValidateState(block, statedb, receipts, usedGas); err != nil {
+		return nil, fmt.Errorf("failed to validate block %d: %w", block.Number(), err)
+	}
+	return witness, testWitness(blockchain, block, witness)
+}
+
+func testWitness(blockchain *core.BlockChain, block *types.Block, witness *stateless.Witness) error {
+	stateRoot := witness.Root()
+	if diskRoot, _ := rawdb.ReadDiskStateRoot(blockchain.Database(), stateRoot); diskRoot != (common.Hash{}) {
+		stateRoot = diskRoot
+	}
+
+	// Create and populate the state database to serve as the stateless backend
+	statedb, err := state.New(stateRoot, state.NewDatabase(witness.MakeHashDB()), nil)
+	if err != nil {
+		return fmt.Errorf("failed to create state database: %w", err)
+	}
+
+	receipts, _, usedGas, err := blockchain.Processor().Process(block, statedb, *blockchain.GetVMConfig())
+	if err != nil {
+		return fmt.Errorf("failed to process block %d: %w", block.Number(), err)
+	}
+
+	if err := blockchain.Validator().ValidateState(block, statedb, receipts, usedGas); err != nil {
+		return fmt.Errorf("failed to validate block %d: %w", block.Number(), err)
+	}
+
+	postStateRoot := block.Root()
+	if diskRoot, _ := rawdb.ReadDiskStateRoot(blockchain.Database(), postStateRoot); diskRoot != (common.Hash{}) {
+		postStateRoot = diskRoot
+	}
+	if statedb.GetRootHash() != postStateRoot {
+		return fmt.Errorf("failed to commit statelessly %d: %w", block.Number(), err)
+	}
+	return nil
+}
+
+// ExecutionWitness is a witness json encoding for transferring across the network.
+// In the future, we'll probably consider using the extWitness format instead for less overhead if performance becomes an issue.
+// Currently using this format for ease of reading, parsing and compatibility across clients.
+type ExecutionWitness struct {
+	Headers []*types.Header   `json:"headers"`
+	Codes   map[string]string `json:"codes"`
+	State   map[string]string `json:"state"`
+}
+
+func transformMap(in map[string]struct{}) map[string]string {
+	out := make(map[string]string, len(in))
+	for item := range in {
+		bytes := []byte(item)
+		key := crypto.Keccak256Hash(bytes).Hex()
+		out[key] = hexutil.Encode(bytes)
+	}
+	return out
+}
+
+// ToExecutionWitness converts a witness to an execution witness format that is compatible with reth.
+// keccak(node) => node
+// keccak(bytecodes) => bytecodes
+func ToExecutionWitness(w *stateless.Witness) *ExecutionWitness {
+	return &ExecutionWitness{
+		Headers: w.Headers,
+		Codes:   transformMap(w.Codes),
+		State:   transformMap(w.State),
+	}
 }
 
 // PrivateDebugAPI is the collection of Ethereum full node APIs exposed over

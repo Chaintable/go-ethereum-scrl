@@ -258,3 +258,8 @@ func (t *ZkTrie) countLeaves(root *zkt.Hash) uint64 {
 		return t.countLeaves(rootNode.ChildL) + t.countLeaves(rootNode.ChildR)
 	}
 }
+
+// Witness returns a set containing all trie nodes that have been accessed.
+func (t *ZkTrie) Witness() map[string]struct{} {
+	panic("not implemented")
+}
