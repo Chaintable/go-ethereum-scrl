@@ -809,7 +809,10 @@ func (w *worker) commit() (common.Hash, error) {
 	}(time.Now())
 
 	w.updateSnapshot()
-	if !w.isRunning() && !w.current.reorging {
+	// Since clocks of mpt-sequencer and zktrie-sequencer can be slightly out of sync,
+	// this might result in a reorg at the Euclid fork block. But it will be resolved shortly after.
+	canCommitState := w.chainConfig.Scroll.UseZktrie != w.chainConfig.IsEuclid(w.current.header.Time)
+	if !canCommitState || (!w.isRunning() && !w.current.reorging) {
 		return common.Hash{}, nil
 	}
 
