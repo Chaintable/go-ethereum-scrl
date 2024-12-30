@@ -961,3 +961,30 @@ func (api *ScrollAPI) CalculateRowConsumptionByBlockNumber(ctx context.Context, 
 	asyncChecker.Wait()
 	return rawdb.ReadBlockRowConsumption(api.eth.ChainDb(), block.Hash()), checkErr
 }
+
+type DiskAndHeaderRoot struct {
+	DiskRoot   common.Hash `json:"diskRoot"`
+	HeaderRoot common.Hash `json:"headerRoot"`
+}
+
+// CalculateRowConsumptionByBlockNumber
+func (api *ScrollAPI) DiskRoot(ctx context.Context, blockNrOrHash *rpc.BlockNumberOrHash) (DiskAndHeaderRoot, error) {
+	block, err := api.eth.APIBackend.BlockByNumberOrHash(ctx, *blockNrOrHash)
+	if err != nil {
+		return DiskAndHeaderRoot{}, fmt.Errorf("failed to retrieve block: %w", err)
+	}
+	if block == nil {
+		return DiskAndHeaderRoot{}, fmt.Errorf("block not found: %s", blockNrOrHash.String())
+	}
+
+	if diskRoot, _ := rawdb.ReadDiskStateRoot(api.eth.ChainDb(), block.Root()); diskRoot != (common.Hash{}) {
+		return DiskAndHeaderRoot{
+			DiskRoot:   diskRoot,
+			HeaderRoot: block.Root(),
+		}, nil
+	}
+	return DiskAndHeaderRoot{
+		DiskRoot:   block.Root(),
+		HeaderRoot: block.Root(),
+	}, nil
+}
