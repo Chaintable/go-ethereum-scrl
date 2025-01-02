@@ -668,7 +668,7 @@ type ScrollConfig struct {
 	L1Config *L1Config `json:"l1Config,omitempty"`
 
 	// Genesis State Root for MPT clients
-	GenesisStateRoot *common.Hash
+	GenesisStateRoot *common.Hash `json:"genesisStateRoot,omitempty"`
 }
 
 // L1Config contains the l1 parameters needed to sync l1 contract events (e.g., l1 messages, commit/revert/finalize batches) in the sequencer

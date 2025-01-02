@@ -889,7 +889,7 @@ func (w *worker) commit() (common.Hash, error) {
 
 	currentHeight := w.current.header.Number.Uint64()
 	maxReorgDepth := uint64(w.config.CCCMaxWorkers + 1)
-	if !w.current.reorging && currentHeight > maxReorgDepth {
+	if w.chainConfig.Scroll.UseZktrie && !w.current.reorging && currentHeight > maxReorgDepth {
 		ancestorHeight := currentHeight - maxReorgDepth
 		ancestorHash := w.chain.GetHeaderByNumber(ancestorHeight).Hash()
 		if rawdb.ReadBlockRowConsumption(w.chain.Database(), ancestorHash) == nil {
@@ -917,8 +917,10 @@ func (w *worker) commit() (common.Hash, error) {
 	w.mux.Post(core.NewMinedBlockEvent{Block: block})
 
 	checkStart := time.Now()
-	if err = w.asyncChecker.Check(block); err != nil {
-		log.Error("failed to launch CCC background task", "err", err)
+	if w.chainConfig.Scroll.UseZktrie {
+		if err = w.asyncChecker.Check(block); err != nil {
+			log.Error("failed to launch CCC background task", "err", err)
+		}
 	}
 	cccStallTimer.UpdateSince(checkStart)
 
