@@ -41,6 +41,7 @@ import (
 	"github.com/scroll-tech/go-ethereum/log"
 	"github.com/scroll-tech/go-ethereum/rlp"
 	"github.com/scroll-tech/go-ethereum/rollup/ccc"
+	"github.com/scroll-tech/go-ethereum/rollup/rcfg"
 	"github.com/scroll-tech/go-ethereum/rpc"
 	"github.com/scroll-tech/go-ethereum/trie"
 )
@@ -347,6 +348,9 @@ func generateWitness(blockchain *core.BlockChain, block *types.Block) (*stateles
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve parent state: %w", err)
 	}
+
+	// Collect storage locations that prover needs but sequencer might not touch necessarily
+	statedb.GetState(rcfg.L2MessageQueueAddress, rcfg.WithdrawTrieRootSlot)
 
 	statedb.StartPrefetcher("debug_execution_witness", witness)
 	defer statedb.StopPrefetcher()
