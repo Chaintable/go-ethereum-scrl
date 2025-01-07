@@ -566,6 +566,11 @@ func (w *worker) handleForks() (bool, error) {
 		misc.ApplyCurieHardFork(w.current.state)
 		return true, nil
 	}
+
+	if w.chainConfig.IsEuclid(w.current.header.Time) {
+		parent := w.chain.GetBlockByHash(w.current.header.ParentHash)
+		return parent != nil && !w.chainConfig.IsEuclid(parent.Time()), nil
+	}
 	return false, nil
 }
 
