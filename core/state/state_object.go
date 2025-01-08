@@ -544,7 +544,10 @@ func (s *stateObject) setNonce(nonce uint64) {
 }
 
 func (s *stateObject) PoseidonCodeHash() []byte {
-	panic("shouldn't be called")
+	if !s.db.IsZktrie() {
+		panic("PoseidonCodeHash is only available in zktrie mode")
+	}
+	return s.data.PoseidonCodeHash
 }
 
 func (s *stateObject) KeccakCodeHash() []byte {
