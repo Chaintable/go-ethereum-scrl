@@ -372,7 +372,7 @@ func (w *worker) mainLoop() {
 		select {
 		case <-w.startCh:
 			idleTimer.UpdateSince(idleStart)
-			if w.isRunning() {
+			if w.isRunning() && w.chainConfig.Scroll.UseZktrie {
 				if err := w.checkHeadRowConsumption(); err != nil {
 					log.Error("failed to start head checkers", "err", err)
 					return
