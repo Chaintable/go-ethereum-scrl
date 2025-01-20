@@ -490,9 +490,10 @@ func (w *worker) newWork(now time.Time, parentHash common.Hash, reorging bool, r
 
 	vmConfig := *w.chain.GetVMConfig()
 	cccLogger := ccc.NewLogger()
-	vmConfig.Debug = true
-	vmConfig.Tracer = cccLogger
-
+	if w.chainConfig.Scroll.UseZktrie {
+		vmConfig.Debug = true
+		vmConfig.Tracer = cccLogger
+	}
 	deadline := time.Unix(int64(header.Time), 0)
 	if w.chainConfig.Clique != nil && w.chainConfig.Clique.RelaxedPeriod {
 		// clique with relaxed period uses time.Now() as the header.Time, calculate the deadline
