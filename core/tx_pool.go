@@ -104,6 +104,7 @@ var (
 	pendingReplaceMeter   = metrics.NewRegisteredMeter("txpool/pending/replace", nil)
 	pendingRateLimitMeter = metrics.NewRegisteredMeter("txpool/pending/ratelimit", nil) // Dropped due to rate limiting
 	pendingNofundsMeter   = metrics.NewRegisteredMeter("txpool/pending/nofunds", nil)   // Dropped due to out-of-funds
+	pendingEvictionMeter  = metrics.NewRegisteredMeter("txpool/pending/eviction", nil)  // Dropped due to lifetime
 
 	// Metrics for the queued pool
 	queuedDiscardMeter   = metrics.NewRegisteredMeter("txpool/queued/discard", nil)
@@ -459,7 +460,7 @@ func (pool *TxPool) loop() {
 						log.Trace("Evicting transaction due to timeout", "account", addr.Hex(), "hash", tx.Hash().Hex(), "lifetime sec", time.Since(pool.beats[addr]).Seconds(), "lifetime limit sec", pool.config.Lifetime.Seconds())
 						pool.removeTx(tx.Hash(), true)
 					}
-					queuedEvictionMeter.Mark(int64(len(list)))
+					pendingEvictionMeter.Mark(int64(len(list)))
 				}
 			}
 			pool.mu.Unlock()
