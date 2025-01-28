@@ -430,6 +430,7 @@ func (pool *TxPool) loop() {
 		// Handle inactive account transaction eviction
 		case <-evict.C:
 			pool.mu.Lock()
+			// Evict queued transactions
 			for addr := range pool.queue {
 				// Skip local transactions from the eviction mechanism
 				if pool.locals.contains(addr) {
@@ -444,6 +445,14 @@ func (pool *TxPool) loop() {
 					}
 					queuedEvictionMeter.Mark(int64(len(list)))
 				}
+			}
+			// Evict pending transactions
+			for addr := range pool.pending {
+				// Skip local transactions from the eviction mechanism
+				if pool.locals.contains(addr) {
+					continue
+				}
+				// Any non-locals old enough should be removed
 				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
 					list := pool.pending[addr].Flatten()
 					for _, tx := range list {
