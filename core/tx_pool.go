@@ -985,6 +985,10 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 
 	// Account pending list is full
 	if uint64(list.Len()) >= pool.config.AccountPendingLimit {
+		pool.all.Remove(hash)
+		pool.calculateTxsLifecycle(types.Transactions{tx}, time.Now())
+		pool.priced.Removed(1)
+		pendingDiscardMeter.Mark(1)
 		return false
 	}
 

@@ -1164,7 +1164,6 @@ func TestTransactionPendingLimiting(t *testing.T) {
 // Tests that if the transaction count belonging to multiple accounts go above
 // some hard threshold, the higher transactions are dropped to prevent DOS
 // attacks.
-// TODO
 func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	t.Parallel()
 
@@ -1204,6 +1203,117 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	}
 	if pending > int(config.GlobalSlots) {
 		t.Fatalf("total pending transactions overflow allowance: %d > %d", pending, config.GlobalSlots)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+}
+
+// Tests that the transaction count belonging to any account cannot go
+// above the configured hard threshold.
+func TestTransactionPendingPerAccountLimiting(t *testing.T) {
+	t.Parallel()
+
+	// Create the pool to test the limit enforcement with
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+	blockchain := &testBlockChain{1000000, statedb, new(event.Feed)}
+
+	config := testTxPoolConfig
+	config.AccountPendingLimit = 16
+
+	pool := NewTxPool(config, params.TestChainConfig, blockchain)
+	defer pool.Stop()
+
+	// Create a number of test accounts and fund them
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
+	}
+
+	// Generate and queue a batch of transactions
+	nonces := make(map[common.Address]uint64)
+	txs := types.Transactions{}
+	for _, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		// Add limit + 1 transactions per account
+		for j := 0; j < int(config.AccountPendingLimit)+1; j++ {
+			txs = append(txs, transaction(nonces[addr], 100000, key))
+			nonces[addr]++
+		}
+	}
+	// Import the batch and verify that limits have been enforced
+	pool.AddRemotesSync(txs)
+
+	// Check that limits are enforced
+	for _, list := range pool.pending {
+		pending := list.Len()
+		if pending > int(config.AccountPendingLimit) {
+			t.Fatalf("pending transactions for account overflow allowance: %d > %d", pending, config.AccountPendingLimit)
+		}
+	}
+	globalPending, globalQueued := pool.Stats()
+	if globalPending != int(config.AccountPendingLimit)*5 {
+		t.Fatalf("unexpected global pending transaction count: %d != %d", globalPending, int(config.AccountPendingLimit)*5)
+	}
+	if globalQueued != 0 {
+		t.Fatalf("unexpected global queued transaction count: %d != %d", globalQueued, 0)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+
+	// Save dropped nonce for future use
+	pendingNonces := make(map[common.Address]uint64)
+	for addr, nonce := range nonces {
+		pendingNonces[addr] = nonce - 1
+	}
+
+	// Generate and queue a batch of transactions (with nonce gap)
+	txs = types.Transactions{}
+	for _, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		for j := 0; j < int(config.AccountPendingLimit); j++ {
+			txs = append(txs, transaction(nonces[addr], 100000, key))
+			nonces[addr]++
+		}
+	}
+	// Import the batch and verify that limits have been enforced
+	pool.AddRemotesSync(txs)
+
+	globalPending, globalQueued = pool.Stats()
+	if globalPending != int(config.AccountPendingLimit)*5 {
+		t.Fatalf("unexpected global pending transaction count: %d != %d", globalPending, int(config.AccountPendingLimit)*5)
+	}
+	if globalQueued != int(config.AccountPendingLimit)*5 {
+		t.Fatalf("unexpected global queued transaction count: %d != %d", globalQueued, int(config.AccountPendingLimit)*5)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+
+	// Generate and queue a batch of transactions (fill the nonce gap)
+	txs = types.Transactions{}
+	for _, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		txs = append(txs, transaction(pendingNonces[addr], 100000, key))
+	}
+	// Import the batch and verify that limits have been enforced
+	pool.AddRemotesSync(txs)
+
+	// Check that limits are enforced
+	for _, list := range pool.pending {
+		pending := list.Len()
+		if pending > int(config.AccountPendingLimit) {
+			t.Fatalf("pending transactions for account overflow allowance: %d > %d", pending, config.AccountPendingLimit)
+		}
+	}
+	globalPending, globalQueued = pool.Stats()
+	if globalPending != int(config.AccountPendingLimit)*5 {
+		t.Fatalf("unexpected global pending transaction count: %d != %d", globalPending, int(config.AccountPendingLimit)*5)
+	}
+	if globalQueued != 0 {
+		t.Fatalf("unexpected global queued transaction count: %d != %d", globalQueued, 0)
 	}
 	if err := validateTxPoolInternals(pool); err != nil {
 		t.Fatalf("pool internal state corrupted: %v", err)
