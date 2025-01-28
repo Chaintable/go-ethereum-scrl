@@ -178,6 +178,8 @@ type TxPoolConfig struct {
 	AccountQueue uint64 // Maximum number of non-executable transaction slots permitted per account
 	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
 
+	AccountPendingLimit uint64 // Number of executable transactions allowed per account
+
 	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
 }
 
@@ -194,6 +196,8 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	GlobalSlots:  4096 + 1024, // urgent + floating queue capacity with 4:1 ratio
 	AccountQueue: 64,
 	GlobalQueue:  1024,
+
+	AccountPendingLimit: 1024,
 
 	Lifetime: 3 * time.Hour,
 }
@@ -229,6 +233,10 @@ func (config *TxPoolConfig) sanitize() TxPoolConfig {
 	if conf.GlobalQueue < 1 {
 		log.Warn("Sanitizing invalid txpool global queue", "provided", conf.GlobalQueue, "updated", DefaultTxPoolConfig.GlobalQueue)
 		conf.GlobalQueue = DefaultTxPoolConfig.GlobalQueue
+	}
+	if conf.AccountPendingLimit < 1 {
+		log.Warn("Sanitizing invalid txpool account pending limit", "provided", conf.AccountPendingLimit, "updated", DefaultTxPoolConfig.AccountPendingLimit)
+		conf.AccountPendingLimit = DefaultTxPoolConfig.AccountPendingLimit
 	}
 	if conf.Lifetime < 1 {
 		log.Warn("Sanitizing invalid txpool lifetime", "provided", conf.Lifetime, "updated", DefaultTxPoolConfig.Lifetime)
@@ -430,6 +438,14 @@ func (pool *TxPool) loop() {
 				// Any non-locals old enough should be removed
 				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
 					list := pool.queue[addr].Flatten()
+					for _, tx := range list {
+						log.Trace("Evicting transaction due to timeout", "account", addr.Hex(), "hash", tx.Hash().Hex(), "lifetime sec", time.Since(pool.beats[addr]).Seconds(), "lifetime limit sec", pool.config.Lifetime.Seconds())
+						pool.removeTx(tx.Hash(), true)
+					}
+					queuedEvictionMeter.Mark(int64(len(list)))
+				}
+				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
+					list := pool.pending[addr].Flatten()
 					for _, tx := range list {
 						log.Trace("Evicting transaction due to timeout", "account", addr.Hex(), "hash", tx.Hash().Hex(), "lifetime sec", time.Since(pool.beats[addr]).Seconds(), "lifetime limit sec", pool.config.Lifetime.Seconds())
 						pool.removeTx(tx.Hash(), true)
@@ -956,6 +972,11 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 		pool.pending[addr] = newTxList(true)
 	}
 	list := pool.pending[addr]
+
+	// Account pending list is full
+	if uint64(list.Len()) >= pool.config.AccountPendingLimit {
+		return false
+	}
 
 	inserted, old := list.Add(tx, pool.currentState, pool.config.PriceBump, pool.chainconfig, pool.currentHead)
 	if !inserted {
@@ -1574,6 +1595,29 @@ func (pool *TxPool) executableTxFilter(costLimit *big.Int) func(tx *types.Transa
 // pending limit. The algorithm tries to reduce transaction counts by an approximately
 // equal number for all for accounts with many pending transactions.
 func (pool *TxPool) truncatePending() {
+	// Truncate pending lists to max length
+	for addr, list := range pool.pending {
+		if list.Len() > int(pool.config.AccountPendingLimit) {
+			caps := list.Cap(int(pool.config.AccountPendingLimit))
+			for _, tx := range caps {
+				// Drop the transaction from the global pools too
+				hash := tx.Hash()
+				pool.all.Remove(hash)
+				pool.calculateTxsLifecycle(types.Transactions{tx}, time.Now())
+
+				// Update the account nonce to the dropped transaction
+				// note: this will set pending nonce to the min nonce from the discarded txs
+				pool.pendingNonces.setIfLower(addr, tx.Nonce())
+				log.Trace("Removed pending transaction to comply with hard limit", "hash", hash.Hex())
+			}
+			pool.priced.Removed(len(caps))
+			pendingGauge.Dec(int64(len(caps)))
+			if pool.locals.contains(addr) {
+				localGauge.Dec(int64(len(caps)))
+			}
+		}
+	}
+
 	pending := uint64(0)
 	for _, list := range pool.pending {
 		pending += uint64(list.Len())
