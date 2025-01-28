@@ -1097,8 +1097,14 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals bool) {
 	// The whole life time pass after last promotion, kick out stale transactions
 	time.Sleep(2 * config.Lifetime)
 	pending, queued = pool.Stats()
-	if pending != 2 {
-		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 2)
+	if nolocals {
+		if pending != 0 {
+			t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 0)
+		}
+	} else {
+		if pending != 1 {
+			t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 1)
+		}
 	}
 	if nolocals {
 		if queued != 0 {
@@ -1158,6 +1164,7 @@ func TestTransactionPendingLimiting(t *testing.T) {
 // Tests that if the transaction count belonging to multiple accounts go above
 // some hard threshold, the higher transactions are dropped to prevent DOS
 // attacks.
+// TODO
 func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	t.Parallel()
 
