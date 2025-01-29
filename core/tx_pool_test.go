@@ -960,6 +960,92 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 }
 
 // Tests that if an account remains idle for a prolonged amount of time, any
+// executable transactions queued up are dropped.
+func TestPendingTransactionTimeLimiting(t *testing.T) {
+	// Reduce the eviction interval to a testable amount
+	defer func(old time.Duration) { evictionInterval = old }(evictionInterval)
+	evictionInterval = time.Millisecond * 100
+
+	// Create the pool to test the non-expiration enforcement
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+	blockchain := &testBlockChain{1000000, statedb, new(event.Feed)}
+
+	config := testTxPoolConfig
+	config.AccountPendingLimit = 1
+	config.Lifetime = time.Second
+
+	pool := NewTxPool(config, params.TestChainConfig, blockchain)
+	defer pool.Stop()
+
+	// Create two test accounts to ensure remotes expire but locals do not
+	local, _ := crypto.GenerateKey()
+	remote, _ := crypto.GenerateKey()
+
+	testAddBalance(pool, crypto.PubkeyToAddress(local.PublicKey), big.NewInt(1000000000))
+	testAddBalance(pool, crypto.PubkeyToAddress(remote.PublicKey), big.NewInt(1000000000))
+
+	err := pool.AddLocal(pricedTransaction(0, 100000, big.NewInt(1), local))
+	require.NoError(t, err, "Failed to insert local transaction")
+
+	err = pool.AddRemote(pricedTransaction(0, 100000, big.NewInt(1), remote))
+	require.NoError(t, err, "Failed to insert remote transaction")
+
+	err = validateTxPoolInternals(pool)
+	require.NoError(t, err, "Pool internal state corrupted")
+
+	pending, queued := pool.Stats()
+	require.Equal(t, 2, pending, "Unexpected global pending tx count")
+	require.Equal(t, 0, queued, "Unexpected global queued tx count")
+
+	// Allow the eviction interval to run
+	time.Sleep(2 * evictionInterval)
+
+	// Transactions should not be evicted from the pool yet since lifetime duration has not passed
+	pending, queued = pool.Stats()
+	require.Equal(t, 2, pending, "Unexpected global pending tx count")
+	require.Equal(t, 0, queued, "Unexpected global queued tx count")
+
+	// Wait a bit for eviction to run and clean up any leftovers, and ensure only the local remains
+	time.Sleep(2 * config.Lifetime)
+
+	pending, queued = pool.Stats()
+	require.Equal(t, 1, pending, "Unexpected global pending tx count")
+	require.Equal(t, 0, queued, "Unexpected global queued tx count")
+
+	// Reinsert dropped remote transaction
+	err = pool.AddRemote(pricedTransaction(0, 100000, big.NewInt(1), remote))
+	require.NoError(t, err, "Failed to insert remote transaction")
+
+	err = validateTxPoolInternals(pool)
+	require.NoError(t, err, "Pool internal state corrupted")
+
+	pending, queued = pool.Stats()
+	require.Equal(t, 2, pending, "Unexpected global pending tx count")
+	require.Equal(t, 0, queued, "Unexpected global queued tx count")
+
+	// Try to insert a 2nd transaction but it is discarded due to account pending limit
+	time.Sleep(config.Lifetime / 2)
+
+	err = pool.AddRemote(pricedTransaction(1, 100000, big.NewInt(1), remote))
+	require.NoError(t, err, "Failed to insert remote transaction")
+
+	err = validateTxPoolInternals(pool)
+	require.NoError(t, err, "Pool internal state corrupted")
+
+	pending, queued = pool.Stats()
+	require.Equal(t, 2, pending, "Unexpected global pending tx count")
+	require.Equal(t, 0, queued, "Unexpected global queued tx count")
+
+	// Clean up remote transaction, this shows that beat was not bumped after failed insertion
+	time.Sleep(config.Lifetime)
+
+	pending, queued = pool.Stats()
+	require.Equal(t, 1, pending, "Unexpected global pending tx count")
+	require.Equal(t, 0, queued, "Unexpected global queued tx count")
+
+}
+
+// Tests that if an account remains idle for a prolonged amount of time, any
 // non-executable transactions queued up are dropped to prevent wasting resources
 // on shuffling them around.
 //

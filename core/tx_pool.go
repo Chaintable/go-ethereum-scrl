@@ -1188,6 +1188,12 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 
 	addr, _ := types.Sender(pool.signer, tx) // already validated during insertion
 
+	defer func(addr common.Address) {
+		if pool.queue[addr].Empty() && pool.pending[addr].Empty() {
+			delete(pool.beats, addr)
+		}
+	}(addr)
+
 	// Remove it from the list of known transactions
 	pool.all.Remove(hash)
 	pool.calculateTxsLifecycle(types.Transactions{tx}, time.Now())
@@ -1224,7 +1230,6 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 		}
 		if future.Empty() {
 			delete(pool.queue, addr)
-			delete(pool.beats, addr)
 		}
 	}
 }
@@ -1579,6 +1584,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) []*types.Trans
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
 			delete(pool.queue, addr)
+		}
+		if pool.queue[addr].Empty() && pool.pending[addr].Empty() {
 			delete(pool.beats, addr)
 		}
 	}
