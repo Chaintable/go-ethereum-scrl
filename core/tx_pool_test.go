@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/core/rawdb"
@@ -1218,8 +1219,10 @@ func TestTransactionPendingPerAccountLimiting(t *testing.T) {
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 	blockchain := &testBlockChain{1000000, statedb, new(event.Feed)}
 
+	limit := 16
+
 	config := testTxPoolConfig
-	config.AccountPendingLimit = 16
+	config.AccountPendingLimit = uint64(limit)
 
 	pool := NewTxPool(config, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -1231,37 +1234,30 @@ func TestTransactionPendingPerAccountLimiting(t *testing.T) {
 		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
 	}
 
-	// Generate and queue a batch of transactions
+	// Generate and queue a batch of transactions (limit + 1 per account)
 	nonces := make(map[common.Address]uint64)
 	txs := types.Transactions{}
 	for _, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
-		// Add limit + 1 transactions per account
-		for j := 0; j < int(config.AccountPendingLimit)+1; j++ {
+		for j := 0; j < limit+1; j++ {
 			txs = append(txs, transaction(nonces[addr], 100000, key))
 			nonces[addr]++
 		}
 	}
-	// Import the batch and verify that limits have been enforced
+
+	// Import the batch and verify txpool consistency
 	pool.AddRemotesSync(txs)
+	err := validateTxPoolInternals(pool)
+	require.NoError(t, err, "pool internal state corrupted")
 
 	// Check that limits are enforced
 	for _, list := range pool.pending {
-		pending := list.Len()
-		if pending > int(config.AccountPendingLimit) {
-			t.Fatalf("pending transactions for account overflow allowance: %d > %d", pending, config.AccountPendingLimit)
-		}
+		require.LessOrEqual(t, list.Len(), limit, "Pending transactions for account overflow allowance")
 	}
-	globalPending, globalQueued := pool.Stats()
-	if globalPending != int(config.AccountPendingLimit)*5 {
-		t.Fatalf("unexpected global pending transaction count: %d != %d", globalPending, int(config.AccountPendingLimit)*5)
-	}
-	if globalQueued != 0 {
-		t.Fatalf("unexpected global queued transaction count: %d != %d", globalQueued, 0)
-	}
-	if err := validateTxPoolInternals(pool); err != nil {
-		t.Fatalf("pool internal state corrupted: %v", err)
-	}
+
+	pending, queued := pool.Stats()
+	require.Equal(t, limit*5, pending, "Unexpected global pending tx count")
+	require.Equal(t, 0, queued, "Unexpected global queued tx count")
 
 	// Save dropped nonce for future use
 	pendingNonces := make(map[common.Address]uint64)
@@ -1273,24 +1269,20 @@ func TestTransactionPendingPerAccountLimiting(t *testing.T) {
 	txs = types.Transactions{}
 	for _, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
-		for j := 0; j < int(config.AccountPendingLimit); j++ {
+		for j := 0; j < limit; j++ {
 			txs = append(txs, transaction(nonces[addr], 100000, key))
 			nonces[addr]++
 		}
 	}
-	// Import the batch and verify that limits have been enforced
-	pool.AddRemotesSync(txs)
 
-	globalPending, globalQueued = pool.Stats()
-	if globalPending != int(config.AccountPendingLimit)*5 {
-		t.Fatalf("unexpected global pending transaction count: %d != %d", globalPending, int(config.AccountPendingLimit)*5)
-	}
-	if globalQueued != int(config.AccountPendingLimit)*5 {
-		t.Fatalf("unexpected global queued transaction count: %d != %d", globalQueued, int(config.AccountPendingLimit)*5)
-	}
-	if err := validateTxPoolInternals(pool); err != nil {
-		t.Fatalf("pool internal state corrupted: %v", err)
-	}
+	// Import the batch and verify txpool consistency
+	pool.AddRemotesSync(txs)
+	err = validateTxPoolInternals(pool)
+	require.NoError(t, err, "pool internal state corrupted")
+
+	pending, queued = pool.Stats()
+	require.Equal(t, limit*5, pending, "Unexpected global pending tx count")
+	require.Equal(t, limit*5, queued, "Unexpected global queued tx count")
 
 	// Generate and queue a batch of transactions (fill the nonce gap)
 	txs = types.Transactions{}
@@ -1298,26 +1290,20 @@ func TestTransactionPendingPerAccountLimiting(t *testing.T) {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		txs = append(txs, transaction(pendingNonces[addr], 100000, key))
 	}
-	// Import the batch and verify that limits have been enforced
+
+	// Import the batch and verify txpool consistency
 	pool.AddRemotesSync(txs)
+	err = validateTxPoolInternals(pool)
+	require.NoError(t, err, "pool internal state corrupted")
 
 	// Check that limits are enforced
 	for _, list := range pool.pending {
-		pending := list.Len()
-		if pending > int(config.AccountPendingLimit) {
-			t.Fatalf("pending transactions for account overflow allowance: %d > %d", pending, config.AccountPendingLimit)
-		}
+		require.LessOrEqual(t, list.Len(), limit, "Pending transactions for account overflow allowance")
 	}
-	globalPending, globalQueued = pool.Stats()
-	if globalPending != int(config.AccountPendingLimit)*5 {
-		t.Fatalf("unexpected global pending transaction count: %d != %d", globalPending, int(config.AccountPendingLimit)*5)
-	}
-	if globalQueued != 0 {
-		t.Fatalf("unexpected global queued transaction count: %d != %d", globalQueued, 0)
-	}
-	if err := validateTxPoolInternals(pool); err != nil {
-		t.Fatalf("pool internal state corrupted: %v", err)
-	}
+
+	pending, queued = pool.Stats()
+	require.Equal(t, limit*5, pending, "Unexpected global pending tx count")
+	require.Equal(t, 0, queued, "Unexpected global queued tx count")
 }
 
 // Test the limit on transaction size is enforced correctly.
