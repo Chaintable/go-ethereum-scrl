@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"slices"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -77,6 +78,10 @@ var (
 	// with a different one without the required price bump.
 	ErrReplaceUnderpriced = errors.New("replacement transaction underpriced")
 
+	// ErrAccountLimitExceeded is returned if a transaction would exceed the number
+	// allowed by a pool for a single account.
+	ErrAccountLimitExceeded = errors.New("account limit exceeded")
+
 	// ErrGasLimit is returned if a transaction's requested gas limit exceeds the
 	// maximum allowance of the current block.
 	ErrGasLimit = errors.New("exceeds block gas limit")
@@ -89,6 +94,11 @@ var (
 	// than some meaningful limit a user might use. This is not a consensus error
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
+
+	// ErrAuthorityReserved is returned if a transaction has an authorization
+	// signed by an address which already has in-flight transactions known to the
+	// pool.
+	ErrAuthorityReserved = errors.New("authority already reserved")
 )
 
 var (
@@ -779,6 +789,47 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
+	usedAndLeftSlots := func(addr common.Address) (int, int) {
+		var have int
+		if list := pool.pending[addr]; list != nil {
+			have += list.Len()
+		}
+		if list := pool.queue[addr]; list != nil {
+			have += list.Len()
+		}
+		if pool.currentState.GetCode(addr) != nil {
+			// Allow at most one in-flight tx for delegated accounts.
+			return have, max(0, 1-have)
+		}
+		return have, math.MaxInt
+	}
+	if used, left := usedAndLeftSlots(from); left <= 0 {
+		return fmt.Errorf("%w: pooled %d txs", ErrAccountLimitExceeded, used)
+	}
+	knownConflicts := func(from common.Address, auths []common.Address) []common.Address {
+		var conflicts []common.Address
+		// The transaction sender cannot have an in-flight authorization.
+		if _, ok := pool.all.auths[from]; ok {
+			conflicts = append(conflicts, from)
+		}
+		// Authorities cannot conflict with any pending or queued transactions.
+		for _, addr := range auths {
+			if list := pool.pending[addr]; list != nil {
+				conflicts = append(conflicts, addr)
+			} else if list := pool.queue[addr]; list != nil {
+				conflicts = append(conflicts, addr)
+			}
+		}
+		return conflicts
+	}
+	if conflicts := knownConflicts(from, tx.Authorities()); len(conflicts) > 0 {
+		return fmt.Errorf("%w: authorization conflicts with other known tx", ErrAuthorityReserved)
+	}
+	if tx.Type() == types.SetCodeTxType {
+		if len(tx.SetCodeAuthorizations()) == 0 {
+			return fmt.Errorf("set code tx must have at least one authorization tuple")
+		}
+	}
 	// 2. If FeeVault is enabled, perform an additional check for L1 data fees.
 	if pool.chainconfig.Scroll.FeeVaultEnabled() {
 		// Get L1 data fee in current state
@@ -793,7 +844,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		}
 	}
 	// Ensure the transaction has more gas than the basic tx fee.
-	intrGas, err := IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, pool.istanbul, pool.shanghai)
+	intrGas, err := IntrinsicGas(tx.Data(), tx.AccessList(), tx.SetCodeAuthorizations(), tx.To() == nil, true, pool.istanbul, pool.shanghai)
 	if err != nil {
 		return err
 	}
@@ -1966,6 +2017,8 @@ type txLookup struct {
 	lock    sync.RWMutex
 	locals  map[common.Hash]*types.Transaction
 	remotes map[common.Hash]*types.Transaction
+
+	auths map[common.Address][]*types.Transaction // All accounts with a pooled authorization
 }
 
 // newTxLookup returns a new txLookup structure.
@@ -1973,6 +2026,7 @@ func newTxLookup() *txLookup {
 	return &txLookup{
 		locals:  make(map[common.Hash]*types.Transaction),
 		remotes: make(map[common.Hash]*types.Transaction),
+		auths:   make(map[common.Address][]*types.Transaction),
 	}
 }
 
@@ -2071,6 +2125,7 @@ func (t *txLookup) Add(tx *types.Transaction, local bool) {
 	} else {
 		t.remotes[tx.Hash()] = tx
 	}
+	t.addAuthorities(tx)
 }
 
 // Remove removes a transaction from the lookup.
@@ -2088,6 +2143,7 @@ func (t *txLookup) Remove(hash common.Hash) {
 	}
 	t.slots -= numSlots(tx)
 	slotsGauge.Update(int64(t.slots))
+	t.removeAuthorities(tx)
 
 	delete(t.locals, hash)
 	delete(t.remotes, hash)
@@ -2120,6 +2176,43 @@ func (t *txLookup) RemotesBelowTip(threshold *big.Int) types.Transactions {
 		return true
 	}, false, true) // Only iterate remotes
 	return found
+}
+
+// addAuthorities tracks the supplied tx in relation to each authority it
+// specifies.
+func (t *txLookup) addAuthorities(tx *types.Transaction) {
+	for _, addr := range tx.Authorities() {
+		list, ok := t.auths[addr]
+		if !ok {
+			list = []*types.Transaction{}
+		}
+		if slices.Contains(list, tx) {
+			// Don't add duplicates.
+			continue
+		}
+		list = append(list, tx)
+		t.auths[addr] = list
+	}
+}
+
+// removeAuthorities stops tracking the supplied tx in relation to its
+// authorities.
+func (t *txLookup) removeAuthorities(tx *types.Transaction) {
+	for _, addr := range tx.Authorities() {
+		// Remove tx from tracker.
+		list := t.auths[addr]
+		if i := slices.Index(list, tx); i >= 0 {
+			list = append(list[:i], list[i+1:]...)
+		} else {
+			log.Error("Authority with untracked tx", "addr", addr, "hash", tx.Hash())
+		}
+		if len(list) == 0 {
+			// If list is newly empty, delete it entirely.
+			delete(t.auths, addr)
+			continue
+		}
+		t.auths[addr] = list
+	}
 }
 
 // numSlots calculates the number of slots needed for a single transaction.
