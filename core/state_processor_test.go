@@ -23,6 +23,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
+	"github.com/holiman/uint256"
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/common/math"
 	"github.com/scroll-tech/go-ethereum/consensus"
@@ -60,6 +61,8 @@ func TestStateProcessorErrors(t *testing.T) {
 			CurieBlock:          big.NewInt(0),
 			DarwinTime:          new(uint64),
 			DarwinV2Time:        new(uint64),
+			EuclidTime:          new(uint64),
+			EuclidV2Time:        new(uint64),
 			Ethash:              new(params.EthashConfig),
 		}
 		signer  = types.LatestSigner(config)
@@ -90,6 +93,22 @@ func TestStateProcessorErrors(t *testing.T) {
 			Value:     big.NewInt(0),
 			Data:      data,
 		}), signer, key1)
+		return tx
+	}
+	var mkSetCodeTx = func(nonce uint64, to common.Address, gasLimit uint64, gasTipCap, gasFeeCap *big.Int, setCodeAuthorizations []types.SetCodeAuthorization) *types.Transaction {
+		tx, err := types.SignTx(types.NewTx(&types.SetCodeTx{
+			ChainID:               uint256.MustFromBig(config.ChainID),
+			Nonce:                 nonce,
+			GasTipCap:             uint256.MustFromBig(gasTipCap),
+			GasFeeCap:             uint256.MustFromBig(gasFeeCap),
+			Gas:                   gasLimit,
+			To:                    to,
+			Value:                 new(uint256.Int),
+			SetCodeAuthorizations: setCodeAuthorizations,
+		}), signer, key1)
+		if err != nil {
+			t.Fatal(err)
+		}
 		return tx
 	}
 	{ // Tests against a 'recent' chain definition
@@ -213,6 +232,13 @@ func TestStateProcessorErrors(t *testing.T) {
 				},
 				want: "could not apply tx 0 [0xd82a0c2519acfeac9a948258c47e784acd20651d9d80f9a1c67b4137651c3a24]: insufficient funds for gas * price + value: address 0x71562b71999873DB5b286dF957af199Ec94617F7 have 1000000000000000000 want 2431633873983640103894990685182446064918669677978451844828609264166175722438635000",
 			},
+			{ // ErrEmptyAuthList
+				txs: []*types.Transaction{
+					mkSetCodeTx(0, common.Address{}, params.TxGas, big.NewInt(params.InitialBaseFee), big.NewInt(params.InitialBaseFee), nil),
+				},
+				want: "could not apply tx 0 [0xc18d10f4c809dbdfa1a074c3300de9bc4b7f16a20f0ec667f6f67312b71b956a]: EIP-7702 transaction with empty auth list (sender 0x71562b71999873DB5b286dF957af199Ec94617F7)",
+			},
+			// ErrSetCodeTxCreate cannot be tested: it is impossible to create a SetCode-tx with nil `to`.
 		} {
 			block := GenerateBadBlock(genesis, ethash.NewFaker(), tt.txs, gspec.Config)
 			_, err := blockchain.InsertChain(types.Blocks{block})
