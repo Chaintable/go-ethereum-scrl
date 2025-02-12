@@ -47,6 +47,7 @@ test: all
 	cd ${PWD}/core/vm/runtime; go test -v -run=^TestDelegatedAccountAccessCost
 	cd ${PWD}/core/types; go test -v -run=^TestParseDelegation
 	cd ${PWD}/internal/ethapi; go test -v -run=^TestEstimateGas
+	cd ${PWD}/cmd/evm; go test -v -run=^TestT8n
 
 lint: ## Run linters.
 	$(GORUN) build/ci.go lint
