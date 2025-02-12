@@ -7,7 +7,6 @@ import (
 	"errors"
 
 	"github.com/holiman/uint256"
-
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/common/hexutil"
 )
@@ -20,7 +19,7 @@ func (s SetCodeAuthorization) MarshalJSON() ([]byte, error) {
 		ChainID hexutil.U256   `json:"chainId" gencodec:"required"`
 		Address common.Address `json:"address" gencodec:"required"`
 		Nonce   hexutil.Uint64 `json:"nonce" gencodec:"required"`
-		V       hexutil.Uint64 `json:"v" gencodec:"required"`
+		V       hexutil.Uint64 `json:"yParity" gencodec:"required"`
 		R       hexutil.U256   `json:"r" gencodec:"required"`
 		S       hexutil.U256   `json:"s" gencodec:"required"`
 	}
@@ -40,7 +39,7 @@ func (s *SetCodeAuthorization) UnmarshalJSON(input []byte) error {
 		ChainID *hexutil.U256   `json:"chainId" gencodec:"required"`
 		Address *common.Address `json:"address" gencodec:"required"`
 		Nonce   *hexutil.Uint64 `json:"nonce" gencodec:"required"`
-		V       *hexutil.Uint64 `json:"v" gencodec:"required"`
+		V       *hexutil.Uint64 `json:"yParity" gencodec:"required"`
 		R       *hexutil.U256   `json:"r" gencodec:"required"`
 		S       *hexutil.U256   `json:"s" gencodec:"required"`
 	}
