@@ -26,6 +26,8 @@ func TestAsyncChecker(t *testing.T) {
 	// Create a database pre-initialize with a genesis block
 	db := rawdb.NewMemoryDatabase()
 	chainConfig := params.TestChainConfig.Clone()
+	chainConfig.EuclidTime = nil
+	chainConfig.EuclidV2Time = nil
 	chainConfig.Scroll.UseZktrie = true
 	(&core.Genesis{
 		Config: chainConfig,
