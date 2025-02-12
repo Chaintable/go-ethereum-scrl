@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/agiledragon/gomonkey/v2"
+
 	"github.com/scroll-tech/go-ethereum/accounts/abi"
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/consensus"

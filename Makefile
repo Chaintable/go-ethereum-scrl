@@ -46,6 +46,7 @@ test: all
 	# EIP-7702 test
 	cd ${PWD}/core/vm/runtime; go test -v -run=^TestDelegatedAccountAccessCost
 	cd ${PWD}/core/types; go test -v -run=^TestParseDelegation
+	cd ${PWD}/internal/ethapi; go test -v -run=^TestEstimateGas
 
 lint: ## Run linters.
 	$(GORUN) build/ci.go lint

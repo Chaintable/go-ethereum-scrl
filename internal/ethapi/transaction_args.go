@@ -271,16 +271,16 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 			setCodeAuthorizations = args.AuthorizationList
 		}
 		data = &types.SetCodeTx{
-			To:                    *args.To,
-			ChainID:               uint256.MustFromBig(args.ChainID.ToInt()),
-			Nonce:                 uint64(*args.Nonce),
-			Gas:                   uint64(*args.Gas),
-			GasFeeCap:             uint256.MustFromBig((*big.Int)(args.MaxFeePerGas)),
-			GasTipCap:             uint256.MustFromBig((*big.Int)(args.MaxPriorityFeePerGas)),
-			Value:                 uint256.MustFromBig((*big.Int)(args.Value)),
-			Data:                  args.data(),
-			AccessList:            al,
-			SetCodeAuthorizations: setCodeAuthorizations,
+			To:         *args.To,
+			ChainID:    uint256.MustFromBig(args.ChainID.ToInt()),
+			Nonce:      uint64(*args.Nonce),
+			Gas:        uint64(*args.Gas),
+			GasFeeCap:  uint256.MustFromBig((*big.Int)(args.MaxFeePerGas)),
+			GasTipCap:  uint256.MustFromBig((*big.Int)(args.MaxPriorityFeePerGas)),
+			Value:      uint256.MustFromBig((*big.Int)(args.Value)),
+			Data:       args.data(),
+			AccessList: al,
+			AuthList:   setCodeAuthorizations,
 		}
 	case args.MaxFeePerGas != nil:
 		al := types.AccessList{}

@@ -178,7 +178,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.Value = (*hexutil.Big)(itx.Value.ToBig())
 		enc.Input = (*hexutil.Bytes)(&itx.Data)
 		enc.AccessList = &itx.AccessList
-		enc.AuthorizationList = itx.SetCodeAuthorizations
+		enc.AuthorizationList = itx.AuthList
 		enc.V = (*hexutil.Big)(itx.V.ToBig())
 		enc.R = (*hexutil.Big)(itx.R.ToBig())
 		enc.S = (*hexutil.Big)(itx.S.ToBig())
@@ -483,7 +483,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		if dec.AuthorizationList == nil {
 			return errors.New("missing required field 'authorizationList' in transaction")
 		}
-		itx.SetCodeAuthorizations = dec.AuthorizationList
+		itx.AuthList = dec.AuthorizationList
 
 		// signature R
 		if dec.R == nil {

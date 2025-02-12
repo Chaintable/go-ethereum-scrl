@@ -3845,13 +3845,13 @@ func TestEIP7702(t *testing.T) {
 	blocks, _ := GenerateChain(gspec.Config, genesis, ethash.NewFaker(), db, 1, func(i int, b *BlockGen) {
 		b.SetCoinbase(aa)
 		txdata := &types.SetCodeTx{
-			ChainID:               uint256.MustFromBig(gspec.Config.ChainID),
-			Nonce:                 0,
-			To:                    addr1,
-			Gas:                   500000,
-			GasFeeCap:             uint256.MustFromBig(newGwei(5)),
-			GasTipCap:             uint256.NewInt(2),
-			SetCodeAuthorizations: []types.SetCodeAuthorization{auth1, auth2},
+			ChainID:   uint256.MustFromBig(gspec.Config.ChainID),
+			Nonce:     0,
+			To:        addr1,
+			Gas:       500000,
+			GasFeeCap: uint256.MustFromBig(newGwei(5)),
+			GasTipCap: uint256.NewInt(2),
+			AuthList:  []types.SetCodeAuthorization{auth1, auth2},
 		}
 		tx := types.MustSignNewTx(key1, signer, txdata)
 		b.AddTx(tx)

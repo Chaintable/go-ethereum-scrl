@@ -24,6 +24,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/holiman/uint256"
+
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/common/math"
 	"github.com/scroll-tech/go-ethereum/consensus"
@@ -97,14 +98,14 @@ func TestStateProcessorErrors(t *testing.T) {
 	}
 	var mkSetCodeTx = func(nonce uint64, to common.Address, gasLimit uint64, gasTipCap, gasFeeCap *big.Int, setCodeAuthorizations []types.SetCodeAuthorization) *types.Transaction {
 		tx, err := types.SignTx(types.NewTx(&types.SetCodeTx{
-			ChainID:               uint256.MustFromBig(config.ChainID),
-			Nonce:                 nonce,
-			GasTipCap:             uint256.MustFromBig(gasTipCap),
-			GasFeeCap:             uint256.MustFromBig(gasFeeCap),
-			Gas:                   gasLimit,
-			To:                    to,
-			Value:                 new(uint256.Int),
-			SetCodeAuthorizations: setCodeAuthorizations,
+			ChainID:   uint256.MustFromBig(config.ChainID),
+			Nonce:     nonce,
+			GasTipCap: uint256.MustFromBig(gasTipCap),
+			GasFeeCap: uint256.MustFromBig(gasFeeCap),
+			Gas:       gasLimit,
+			To:        to,
+			Value:     new(uint256.Int),
+			AuthList:  setCodeAuthorizations,
 		}), signer, key1)
 		if err != nil {
 			t.Fatal(err)

@@ -50,16 +50,16 @@ func AddressToDelegation(addr common.Address) []byte {
 // SetCodeTx implements the EIP-7702 transaction type which temporarily installs
 // the code at the signer's address.
 type SetCodeTx struct {
-	ChainID               *uint256.Int
-	Nonce                 uint64
-	GasTipCap             *uint256.Int // a.k.a. maxPriorityFeePerGas
-	GasFeeCap             *uint256.Int // a.k.a. maxFeePerGas
-	Gas                   uint64
-	To                    common.Address
-	Value                 *uint256.Int
-	Data                  []byte
-	AccessList            AccessList
-	SetCodeAuthorizations []SetCodeAuthorization
+	ChainID    *uint256.Int
+	Nonce      uint64
+	GasTipCap  *uint256.Int // a.k.a. maxPriorityFeePerGas
+	GasFeeCap  *uint256.Int // a.k.a. maxFeePerGas
+	Gas        uint64
+	To         common.Address
+	Value      *uint256.Int
+	Data       []byte
+	AccessList AccessList
+	AuthList   []SetCodeAuthorization
 
 	// Signature values
 	V *uint256.Int `json:"v" gencodec:"required"`
@@ -146,18 +146,18 @@ func (tx *SetCodeTx) copy() TxData {
 		Data:  common.CopyBytes(tx.Data),
 		Gas:   tx.Gas,
 		// These are copied below.
-		AccessList:            make(AccessList, len(tx.AccessList)),
-		SetCodeAuthorizations: make([]SetCodeAuthorization, len(tx.SetCodeAuthorizations)),
-		Value:                 new(uint256.Int),
-		ChainID:               new(uint256.Int),
-		GasTipCap:             new(uint256.Int),
-		GasFeeCap:             new(uint256.Int),
-		V:                     new(uint256.Int),
-		R:                     new(uint256.Int),
-		S:                     new(uint256.Int),
+		AccessList: make(AccessList, len(tx.AccessList)),
+		AuthList:   make([]SetCodeAuthorization, len(tx.AuthList)),
+		Value:      new(uint256.Int),
+		ChainID:    new(uint256.Int),
+		GasTipCap:  new(uint256.Int),
+		GasFeeCap:  new(uint256.Int),
+		V:          new(uint256.Int),
+		R:          new(uint256.Int),
+		S:          new(uint256.Int),
 	}
 	copy(cpy.AccessList, tx.AccessList)
-	copy(cpy.SetCodeAuthorizations, tx.SetCodeAuthorizations)
+	copy(cpy.AuthList, tx.AuthList)
 	if tx.Value != nil {
 		cpy.Value.Set(tx.Value)
 	}
