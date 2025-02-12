@@ -1057,8 +1057,5 @@ func TestDelegatedAccountAccessCost(t *testing.T) {
 			}
 			t.Fatalf("tescase %d, gas report wrong, step %d, have %d want %d", i, tc.step, have, want)
 		}
-		if want := tc.want; have != want {
-			t.Fatalf("testcase %d, gas report wrong, step %d, have %d want %d", i, tc.step, have, want)
-		}
 	}
 }
