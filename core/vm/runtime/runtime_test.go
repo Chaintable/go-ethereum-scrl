@@ -974,9 +974,9 @@ func TestDelegatedAccountAccessCost(t *testing.T) {
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 	statedb.SetCode(common.HexToAddress("0xff"), types.AddressToDelegation(common.HexToAddress("0xaa")))
 	statedb.SetCode(common.HexToAddress("0xaa"), []byte{
-		byte(vm.PUSH1), 0x00, // PUSH1 0
-		byte(vm.PUSH1), 0x00, // PUSH1 0
-		byte(vm.RETURN), // RETURN
+		byte(vm.PUSH1), 0x00,
+		byte(vm.PUSH1), 0x00,
+		byte(vm.RETURN),
 	})
 
 	code := statedb.GetCode(common.HexToAddress("0xff"))

@@ -3813,12 +3813,29 @@ func TestEIP7702(t *testing.T) {
 			addr1: {Balance: funds},
 			addr2: {Balance: funds},
 			aa: { // The address 0xAAAA calls into addr2
-				Code:    common.Hex2Bytes("6000600060006000600173703c4b2bd70c169f5717101caee543299fc946c75af1"),
+				Code: append(
+					[]byte{
+						byte(vm.PUSH1), 0x00,
+						byte(vm.PUSH1), 0x00,
+						byte(vm.PUSH1), 0x00,
+						byte(vm.PUSH1), 0x00,
+						byte(vm.PUSH1), 0x01,
+						byte(vm.PUSH20),
+					},
+					append(
+						addr2.Bytes(),
+						byte(vm.GAS),
+						byte(vm.CALL),
+					)...),
 				Nonce:   0,
 				Balance: big.NewInt(0),
 			},
 			bb: { // The address 0xBBBB sstores 42 into slot 42.
-				Code:    common.Hex2Bytes("6042604255"),
+				Code: []byte{
+					byte(vm.PUSH1), 0x42,
+					byte(vm.PUSH1), 0x42,
+					byte(vm.SSTORE),
+				},
 				Nonce:   0,
 				Balance: big.NewInt(0),
 			},
