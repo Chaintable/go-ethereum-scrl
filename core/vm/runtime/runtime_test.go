@@ -979,14 +979,6 @@ func TestDelegatedAccountAccessCost(t *testing.T) {
 		byte(vm.RETURN),
 	})
 
-	code := statedb.GetCode(common.HexToAddress("0xff"))
-	t.Logf("Code at 0xff: %x", code)
-
-	code = statedb.GetCode(common.HexToAddress("0xaa"))
-	t.Logf("Code at 0xaa: %x", code)
-
-	fmt.Println(statedb.Exist(common.HexToAddress("0xff")))
-
 	patches := gomonkey.ApplyMethod(reflect.TypeOf(statedb), "GetPoseidonCodeHash", func(_ *state.StateDB, addr common.Address) common.Hash {
 		return common.HexToHash("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
 	})
