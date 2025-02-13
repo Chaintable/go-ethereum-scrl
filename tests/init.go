@@ -181,6 +181,7 @@ var Forks = map[string]*params.ChainConfig{
 		MuirGlacierBlock:    big.NewInt(0),
 		BerlinBlock:         big.NewInt(0),
 		LondonBlock:         big.NewInt(0),
+		CurieBlock:          big.NewInt(0), // EIP-1559 is enabled in Curie fork
 	},
 	"ArrowGlacier": {
 		ChainID:             big.NewInt(1),

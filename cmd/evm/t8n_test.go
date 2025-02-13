@@ -148,14 +148,14 @@ func TestT8n(t *testing.T) {
 			output: t8nOutput{body: true},
 			expOut: "exp.json",
 		},
-		//{ // Already signed transactions
-		//	base: "./testdata/13",
-		//	input: t8nInput{
-		//		"alloc.json", "signed_txs.rlp", "env.json", "London", "",
-		//	},
-		//	output: t8nOutput{result: true},
-		//	expOut: "exp2.json",
-		//},
+		{ // Already signed transactions
+			base: "./testdata/13",
+			input: t8nInput{
+				"alloc.json", "signed_txs.rlp", "env.json", "London", "",
+			},
+			output: t8nOutput{result: true},
+			expOut: "exp2.json",
+		},
 		{ // Difficulty calculation - no uncles
 			base: "./testdata/14",
 			input: t8nInput{
