@@ -292,6 +292,7 @@ type TxPool struct {
 	eip2718  bool // Fork indicator whether we are using EIP-2718 type transactions.
 	eip1559  bool // Fork indicator whether we are using EIP-1559 type transactions.
 	shanghai bool // Fork indicator whether we are in the Shanghai stage.
+	eip7702  bool // Fork indicator whether we are using EIP-7702 type transactions.
 
 	currentState  *state.StateDB // Current state in the blockchain head
 	currentHead   *big.Int       // Current blockchain head
@@ -751,6 +752,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Reject dynamic fee transactions until EIP-1559 activates.
 	if !pool.eip1559 && tx.Type() == types.DynamicFeeTxType {
+		return ErrTxTypeNotSupported
+	}
+	// Reject set code transactions until EIP-7702 activates.
+	if !pool.eip7702 && tx.Type() == types.SetCodeTxType {
 		return ErrTxTypeNotSupported
 	}
 	// Reject transactions over defined size to prevent DOS attacks
@@ -1580,6 +1585,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.eip2718 = pool.chainconfig.IsCurie(next)
 	pool.eip1559 = pool.chainconfig.IsCurie(next)
 	pool.shanghai = pool.chainconfig.IsShanghai(next)
+	pool.eip7702 = pool.chainconfig.IsEuclidV2(newHead.Time)
 
 	// Update current head
 	pool.currentHead = next
