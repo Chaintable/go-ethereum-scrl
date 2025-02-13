@@ -447,7 +447,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		evm.StateDB.AddAddressToAccessList(address)
 	}
 	// Ensure there's no existing contract already at the designated address
-	contractHash := evm.resolveKeccakCodeHash(address)
+	contractHash := evm.StateDB.GetKeccakCodeHash(address)
 	if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyKeccakCodeHash) {
 		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
