@@ -419,23 +419,13 @@ func (rs Receipts) Len() int { return len(rs) }
 func (rs Receipts) EncodeIndex(i int, w *bytes.Buffer) {
 	r := rs[i]
 	data := &receiptRLP{r.statusEncoding(), r.CumulativeGasUsed, r.Bloom, r.Logs}
+	if r.Type == LegacyTxType {
+		rlp.Encode(w, data)
+		return
+	}
+	w.WriteByte(r.Type)
 	switch r.Type {
-	case LegacyTxType:
-		rlp.Encode(w, data)
-	case AccessListTxType:
-		w.WriteByte(AccessListTxType)
-		rlp.Encode(w, data)
-	case DynamicFeeTxType:
-		w.WriteByte(DynamicFeeTxType)
-		rlp.Encode(w, data)
-	case BlobTxType:
-		w.WriteByte(BlobTxType)
-		rlp.Encode(w, data)
-	case SetCodeTxType:
-		w.WriteByte(SetCodeTxType)
-		rlp.Encode(w, data)
-	case L1MessageTxType:
-		w.WriteByte(L1MessageTxType)
+	case AccessListTxType, DynamicFeeTxType, BlobTxType, SetCodeTxType, L1MessageTxType:
 		rlp.Encode(w, data)
 	default:
 		// For unsupported types, write nothing. Since this is for
