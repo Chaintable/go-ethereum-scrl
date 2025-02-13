@@ -26,8 +26,6 @@ func TestAsyncChecker(t *testing.T) {
 	// Create a database pre-initialize with a genesis block
 	db := rawdb.NewMemoryDatabase()
 	chainConfig := params.TestChainConfig.Clone()
-	chainConfig.EuclidTime = nil
-	chainConfig.EuclidV2Time = nil
 	chainConfig.Scroll.UseZktrie = true
 	(&core.Genesis{
 		Config: chainConfig,
@@ -55,7 +53,11 @@ func TestAsyncChecker(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 	for _, block := range noReorgBlocks {
-		require.NotNil(t, rawdb.ReadBlockRowConsumption(db, block.Hash()))
+		if chain.Config().IsEuclid(block.Time()) { // After Euclid, blocks use MPT and CCC doesn't support them.
+			require.Nil(t, rawdb.ReadBlockRowConsumption(db, block.Hash()))
+		} else {
+			require.NotNil(t, rawdb.ReadBlockRowConsumption(db, block.Hash()))
+		}
 	}
 
 	reorgBlocks := bs[len(bs)/2:]
