@@ -129,7 +129,7 @@ func (result *ExecutionResult) Revert() []byte {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, accessList types.AccessList, setCodeAuthorizations []types.SetCodeAuthorization, isContractCreation bool, isHomestead, isEIP2028 bool, isEIP3860 bool) (uint64, error) {
+func IntrinsicGas(data []byte, accessList types.AccessList, authList []types.SetCodeAuthorization, isContractCreation bool, isHomestead, isEIP2028 bool, isEIP3860 bool) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
 	if isContractCreation && isHomestead {
@@ -175,8 +175,8 @@ func IntrinsicGas(data []byte, accessList types.AccessList, setCodeAuthorization
 		gas += uint64(len(accessList)) * params.TxAccessListAddressGas
 		gas += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
 	}
-	if setCodeAuthorizations != nil {
-		gas += uint64(len(setCodeAuthorizations)) * params.CallNewAccountGas
+	if authList != nil {
+		gas += uint64(len(authList)) * params.CallNewAccountGas
 	}
 	return gas, nil
 }
