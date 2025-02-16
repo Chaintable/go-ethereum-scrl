@@ -47,6 +47,13 @@ func AddressToDelegation(addr common.Address) []byte {
 	return append(DelegationPrefix, addr.Bytes()...)
 }
 
+// AuthorizationResult is the result of SetCode transaction's delegations.
+type AuthorizationResult struct {
+	Authority common.Address
+	PreCode   []byte
+	Success   bool
+}
+
 // SetCodeTx implements the EIP-7702 transaction type which temporarily installs
 // the code at the signer's address.
 type SetCodeTx struct {

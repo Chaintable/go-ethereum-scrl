@@ -413,10 +413,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 
 		// Apply EIP-7702 authorizations.
+		var authorizationResults []types.AuthorizationResult
 		if msg.SetCodeAuthorizations() != nil {
 			for _, auth := range st.msg.SetCodeAuthorizations() {
 				// Note errors are ignored, we simply skip invalid authorizations here.
-				st.applyAuthorization(&auth)
+				authorizationResults = append(authorizationResults, st.applyAuthorization(&auth))
 			}
 		}
 
@@ -430,7 +431,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		}
 
 		evmCallStart := time.Now()
-		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
+		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value, authorizationResults)
 		stateTransitionEvmCallExecutionTimer.Update(time.Since(evmCallStart))
 	}
 
@@ -474,19 +475,19 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 }
 
 // validateAuthorization validates an EIP-7702 authorization against the state.
-func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorization) (authority common.Address, err error) {
+func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorization) (authority common.Address, preCode []byte, err error) {
 	// Verify chain ID is 0 or equal to current chain ID.
 	if !auth.ChainID.IsZero() && auth.ChainID.CmpBig(st.evm.ChainConfig().ChainID) != 0 {
-		return authority, ErrAuthorizationWrongChainID
+		return authority, nil, ErrAuthorizationWrongChainID
 	}
 	// Limit nonce to 2^64-1 per EIP-2681.
 	if auth.Nonce+1 < auth.Nonce {
-		return authority, ErrAuthorizationNonceOverflow
+		return authority, nil, ErrAuthorizationNonceOverflow
 	}
 	// Validate signature values and recover authority.
 	authority, err = auth.Authority()
 	if err != nil {
-		return authority, fmt.Errorf("%w: %v", ErrAuthorizationInvalidSignature, err)
+		return authority, nil, fmt.Errorf("%w: %v", ErrAuthorizationInvalidSignature, err)
 	}
 	// Check the authority account
 	//  1) doesn't have code or has exisiting delegation
@@ -496,19 +497,19 @@ func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorizatio
 	st.state.AddAddressToAccessList(authority)
 	code := st.state.GetCode(authority)
 	if _, ok := types.ParseDelegation(code); len(code) != 0 && !ok {
-		return authority, ErrAuthorizationDestinationHasCode
+		return authority, nil, ErrAuthorizationDestinationHasCode
 	}
 	if have := st.state.GetNonce(authority); have != auth.Nonce {
-		return authority, ErrAuthorizationNonceMismatch
+		return authority, nil, ErrAuthorizationNonceMismatch
 	}
-	return authority, nil
+	return authority, code, nil
 }
 
 // applyAuthorization applies an EIP-7702 code delegation to the state.
-func (st *StateTransition) applyAuthorization(auth *types.SetCodeAuthorization) error {
-	authority, err := st.validateAuthorization(auth)
+func (st *StateTransition) applyAuthorization(auth *types.SetCodeAuthorization) types.AuthorizationResult {
+	authority, preCode, err := st.validateAuthorization(auth)
 	if err != nil {
-		return err
+		return types.AuthorizationResult{Authority: common.Address{}, PreCode: nil, Success: false}
 	}
 
 	// If the account already exists in state, refund the new account cost
@@ -522,13 +523,13 @@ func (st *StateTransition) applyAuthorization(auth *types.SetCodeAuthorization) 
 	if auth.Address == (common.Address{}) {
 		// Delegation to zero address means clear.
 		st.state.SetCode(authority, nil)
-		return nil
+		return types.AuthorizationResult{Authority: authority, PreCode: preCode, Success: true}
 	}
 
 	// Otherwise install delegation to auth.Address.
 	st.state.SetCode(authority, types.AddressToDelegation(auth.Address))
 
-	return nil
+	return types.AuthorizationResult{Authority: authority, PreCode: preCode, Success: true}
 }
 
 func (st *StateTransition) refundGas(refundQuotient uint64) {
