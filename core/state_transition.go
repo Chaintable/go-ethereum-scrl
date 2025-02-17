@@ -502,7 +502,10 @@ func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorizatio
 	if have := st.state.GetNonce(authority); have != auth.Nonce {
 		return authority, nil, ErrAuthorizationNonceMismatch
 	}
-	return authority, code, nil
+
+	preCodeCopy := make([]byte, len(code))
+	copy(preCodeCopy, code)
+	return authority, preCodeCopy, nil
 }
 
 // applyAuthorization applies an EIP-7702 code delegation to the state.
