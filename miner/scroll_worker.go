@@ -847,6 +847,8 @@ func (w *worker) commit() (common.Hash, error) {
 		l2CommitTimer.Update(time.Since(t0) - sealDelay)
 	}(time.Now())
 
+	log.Info("hhf: ", "useZktrie", w.chainConfig.Scroll.UseZktrie, "isEuclid", w.chainConfig.IsEuclid(w.current.header.Time))
+
 	w.updateSnapshot()
 	// Since clocks of mpt-sequencer and zktrie-sequencer can be slightly out of sync,
 	// this might result in a reorg at the Euclid fork block. But it will be resolved shortly after.
