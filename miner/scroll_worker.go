@@ -779,6 +779,7 @@ func (w *worker) processTxn(tx *types.Transaction) (bool, error) {
 	// If we have collected enough transactions then we're done
 	// Originally we only limit l2txs count, but now strictly limit total txs number.
 	if !w.chain.Config().Scroll.IsValidTxCount(w.current.txs.Len() + 1) {
+		log.Info("hhf: Reached max tx count", "txs", w.current.txs.Len())
 		return true, nil
 	}
 
