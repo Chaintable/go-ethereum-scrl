@@ -383,6 +383,7 @@ func (c *Clique) snapshot(chain consensus.ChainHeaderReader, number uint64, hash
 	for snap == nil {
 		log.Info("hhf: Creating snapshot", "number", number)
 		if c.config.ShadowForkHeight > 0 && number == c.config.ShadowForkHeight {
+			log.Info("hhf: ShadowForkHeight", "number", number)
 			c.signatures.Purge()
 			c.recents.Purge()
 			c.proposals = make(map[common.Address]bool)
