@@ -532,6 +532,7 @@ func (s *Ethereum) StartMining(threads int) error {
 			return fmt.Errorf("etherbase missing: %v", err)
 		}
 		if wrapper, ok := s.engine.(*wrapper.UpgradableEngine); ok {
+			log.Info("hhf: wrapper Upgradable engine started")
 			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 			if wallet == nil || err != nil {
 				log.Error("Etherbase account unavailable locally", "err", err)
@@ -539,6 +540,7 @@ func (s *Ethereum) StartMining(threads int) error {
 			}
 			wrapper.Authorize(eb, wallet.SignData, wallet.SignData)
 		} else if clique, ok := s.engine.(*clique.Clique); ok {
+			log.Info("hhf: wrapper clique engine started")
 			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 			if wallet == nil || err != nil {
 				log.Error("Etherbase account unavailable locally", "err", err)
@@ -546,6 +548,7 @@ func (s *Ethereum) StartMining(threads int) error {
 			}
 			clique.Authorize(eb, wallet.SignData)
 		} else if systemContract, ok := s.engine.(*system_contract.SystemContract); ok {
+			log.Info("hhf: wrapper system contract engine started")
 			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 			if wallet == nil || err != nil {
 				log.Error("Etherbase account unavailable locally", "err", err)
