@@ -584,6 +584,7 @@ func (w *worker) newWork(now time.Time, parentHash common.Hash, reorging bool, r
 
 // tryCommitNewWork
 func (w *worker) tryCommitNewWork(now time.Time, parent common.Hash, reorging bool, reorgReason error) (common.Hash, error) {
+	log.Info("hhf: clique value", "clique", *w.chainConfig.Clique)
 	err := w.newWork(now, parent, reorging, reorgReason)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed creating new work: %w", err)
