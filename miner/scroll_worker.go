@@ -500,16 +500,18 @@ func (w *worker) newWork(now time.Time, parentHash common.Hash, reorging bool, r
 	}
 
 	if w.config.SigningDisabled {
+		log.Info("hhf: Signing disabled, creating empty block", "blockNumber", header.Number)
 		// Need to make sure to set difficulty so that a new canonical chain is detected in Blockchain
 		header.Difficulty = new(big.Int).SetUint64(1)
 		header.MixDigest = common.Hash{}
 		header.Coinbase = common.Address{}
 		header.Nonce = types.BlockNonce{}
 	} else {
+		log.Info("hhf: Creating block", "blockNumber", header.Number)
 		prepareStart := time.Now()
 		// Note: this call will set header.Time, among other fields.
 		if err := w.engine.Prepare(w.chain, header, nil); err != nil {
-			return fmt.Errorf("failed to prepare header for mining: %w", err)
+			return fmt.Errorf("hhf: failed to prepare header for mining: %w", err)
 		}
 		prepareTimer.UpdateSince(prepareStart)
 

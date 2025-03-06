@@ -381,6 +381,7 @@ func (c *Clique) snapshot(chain consensus.ChainHeaderReader, number uint64, hash
 		snap    *Snapshot
 	)
 	for snap == nil {
+		log.Info("hhf: Creating snapshot", "number", number)
 		if c.config.ShadowForkHeight > 0 && number == c.config.ShadowForkHeight {
 			c.signatures.Purge()
 			c.recents.Purge()
