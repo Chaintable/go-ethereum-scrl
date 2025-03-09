@@ -236,7 +236,6 @@ type Config struct {
 func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database, l1Client sync_service.EthClient) consensus.Engine {
 	// Case 1: Both SystemContract and Clique are defined: create an upgradable engine.
 	if chainConfig.SystemContract != nil && chainConfig.Clique != nil {
-		log.Info("hhf: Starting Upgradable consensus engine")
 		cliqueEngine := clique.New(chainConfig.Clique, db)
 		sysEngine := system_contract.New(context.Background(), chainConfig.SystemContract, l1Client)
 		sysEngine.Start()
@@ -245,11 +244,9 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 
 	// Case 2: Only the Clique engine is defined.
 	if chainConfig.Clique != nil {
-		log.Info("hhf: Starting Clique consensus engine")
 		return clique.New(chainConfig.Clique, db)
 	}
 
-	log.Info("hhf: Starting others consensus engine")
 	// Case 3: Only the SystemContract engine is defined.
 	if chainConfig.SystemContract != nil {
 		sysEngine := system_contract.New(context.Background(), chainConfig.SystemContract, l1Client)

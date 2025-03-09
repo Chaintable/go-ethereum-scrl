@@ -146,10 +146,8 @@ func (miner *Miner) update() {
 				events.Unsubscribe()
 			}
 		case addr := <-miner.startCh:
-			log.Info("hhf: receive start event", "addr", addr)
 			miner.SetEtherbase(addr)
 			if canStart {
-				log.Info("hhf: start mine", "addr", addr)
 				miner.worker.start()
 			}
 			shouldStart = true
