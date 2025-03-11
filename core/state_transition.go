@@ -256,7 +256,7 @@ func (st *StateTransition) buyGas() error {
 		}
 	}
 	if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
-		st.state.AddBalance(st.msg.From(), big.NewInt(1000000000000000000))
+		st.state.AddBalance(st.msg.From(), want)
 		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 	}
 	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
