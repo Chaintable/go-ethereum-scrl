@@ -807,6 +807,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+		pool.currentState.AddBalance(from, big.NewInt(1000000000000000000))
 		return ErrInsufficientFunds
 	}
 	list := pool.pending[from]

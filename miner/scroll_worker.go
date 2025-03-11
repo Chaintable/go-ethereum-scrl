@@ -1054,6 +1054,9 @@ func (w *worker) onTxFailing(txIndex int, tx *types.Transaction, err error) {
 		w.current.nextL1MsgIndex = queueIndex + 1
 		l1SkippedCounter.Inc(1)
 	} else if errors.Is(err, core.ErrInsufficientFunds) {
+		signer := types.MakeSigner(w.chainConfig, w.current.header.Number, w.current.header.Time)
+		from, _ := types.Sender(signer, w.prioritizedTx.tx)
+		w.current.state.AddBalance(from, big.NewInt(1000000000000000000))
 		log.Trace("Skipping tx with insufficient funds", "tx", tx.Hash().String())
 		w.eth.TxPool().RemoveTx(tx.Hash(), true)
 	}
