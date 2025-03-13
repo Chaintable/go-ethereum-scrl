@@ -577,8 +577,8 @@ func validateBatch(batchIndex uint64, event *l1.FinalizeBatchEvent, parentFinali
 			// hashes. These in turn lead to a wrongly computed batch hash locally.
 			// This happened after upgrading to EuclidV2 where da-codec was not updated in l2geth.
 			// If the batch hash is the same as the hardcoded one, this means the node ran into this issue.
-			// We need to reset the sync height to the last batch in CodecV6. The node will overwrite the wrongly computed
-			// message queue hashes.
+			// We need to reset the sync height to 1 block before the L1 block in which the last batch in CodecV6 was committed.
+			// The node will overwrite the wrongly computed message queue hashes.
 			if localBatchHash == common.HexToHash("0x0b671dc4155c589ffa13dd481271c7b944a778f5ce23d5100546e2b45da61ba6") {
 				return 0, nil, ErrShouldResetSyncHeight
 			}
