@@ -208,7 +208,7 @@ func (s *RollupSyncService) fetchRollupEvents() error {
 
 		if err = s.updateRollupEvents(daEntries); err != nil {
 			if errors.Is(err, ErrShouldResetSyncHeight) {
-				log.Warn("Resetting sync height to L1 block 7892672 to fix L1 message queue hash calculation")
+				log.Warn("Resetting sync height to L1 block 7892668 to fix L1 message queue hash calculation")
 				s.callDataBlobSource.SetL1Height(7892668)
 
 				return nil
