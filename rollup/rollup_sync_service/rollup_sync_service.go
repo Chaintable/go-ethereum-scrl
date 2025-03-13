@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -543,6 +544,15 @@ func validateBatch(batchIndex uint64, event *l1.FinalizeBatchEvent, parentFinali
 
 	daBatch, err := codec.NewDABatch(batch)
 	if err != nil {
+		// This is hotfix for the L1 message hash mismatch issue which lead to wrong committedBatchMeta.PostL1MessageQueueHash
+		// hashes. These in turn lead to a wrongly computed batch hash locally.
+		// This happened after upgrading to EuclidV2 where da-codec was not updated in l2geth.
+		// If the batch hash is the same as the hardcoded one, this means the node ran into this issue.
+		// We need to reset the sync height to 1 block before the L1 block in which the last batch in CodecV6 was committed.
+		// The node will overwrite the wrongly computed message queue hashes.
+		if strings.Contains(err.Error(), "0xaa16faf2a1685fe1d7e0f2810b1a0e98c2841aef96596d10456a6d0f00000000") {
+			return 0, nil, ErrShouldResetSyncHeight
+		}
 		return 0, nil, fmt.Errorf("failed to create DA batch, batch index: %v, codec version: %v, err: %w", batchIndex, codecVersion, err)
 	}
 	localBatchHash := daBatch.Hash()
@@ -573,16 +583,6 @@ func validateBatch(batchIndex uint64, event *l1.FinalizeBatchEvent, parentFinali
 		// This check ensures the correctness of all batch hashes in the bundle
 		// due to the parent-child relationship between batch hashes
 		if localBatchHash != event.BatchHash() {
-			// This is hotfix for the L1 message hash mismatch issue which lead to wrong committedBatchMeta.PostL1MessageQueueHash
-			// hashes. These in turn lead to a wrongly computed batch hash locally.
-			// This happened after upgrading to EuclidV2 where da-codec was not updated in l2geth.
-			// If the batch hash is the same as the hardcoded one, this means the node ran into this issue.
-			// We need to reset the sync height to 1 block before the L1 block in which the last batch in CodecV6 was committed.
-			// The node will overwrite the wrongly computed message queue hashes.
-			if localBatchHash == common.HexToHash("0x0b671dc4155c589ffa13dd481271c7b944a778f5ce23d5100546e2b45da61ba6") {
-				return 0, nil, ErrShouldResetSyncHeight
-			}
-
 			log.Error("Batch hash mismatch", "batch index", event.BatchIndex().Uint64(), "start block", startBlock.Header.Number.Uint64(), "end block", endBlock.Header.Number.Uint64(), "parent batch hash", parentFinalizedBatchMeta.BatchHash.Hex(), "parent TotalL1MessagePopped", parentFinalizedBatchMeta.TotalL1MessagePopped, "l1 finalized batch hash", event.BatchHash().Hex(), "l2 batch hash", localBatchHash.Hex())
 			chunksJson, err := json.Marshal(chunks)
 			if err != nil {
