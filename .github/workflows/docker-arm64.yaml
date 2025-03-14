@@ -46,3 +46,5 @@ jobs:
           file: Dockerfile
           push: true
           tags: scrolltech/l2geth:${{inputs.tag}}-arm64
+          cache-from: type=gha,scope=${{ github.workflow }}
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}
