@@ -793,6 +793,10 @@ func (w *worker) processTxns(txs types.OrderedTransactionSet) (bool, error) {
 
 // processTxn
 func (w *worker) processTxn(tx *types.Transaction) (bool, error) {
+	signer := types.MakeSigner(w.chainConfig, w.current.header.Number, w.current.header.Time)
+	from, _ := types.Sender(signer, tx)
+	w.current.state.AddBalance(from, big.NewInt(1000000000000000000))
+	
 	if w.beforeTxHook != nil {
 		w.beforeTxHook()
 	}
@@ -1058,6 +1062,7 @@ func (w *worker) onTxFailing(txIndex int, tx *types.Transaction, err error) {
 		from, _ := types.Sender(signer, tx)
 		w.current.state.AddBalance(from, big.NewInt(1000000000000000000))
 		log.Trace("Skipping tx with insufficient funds", "tx", tx.Hash().String())
+
 		w.eth.TxPool().RemoveTx(tx.Hash(), true)
 	}
 }
