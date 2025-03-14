@@ -1595,7 +1595,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) []*types.Trans
 
 		// Drop all transactions that are too costly (low balance or out of gas)
 		costLimit := pool.currentState.GetBalance(addr)
-		drops, _ := list.FilterF(costLimit, pool.currentMaxGas, pool.executableTxFilter(costLimit))
+		drops, _ := list.FilterF(costLimit, pool.currentMaxGas, pool.executableTxFilter(costLimit, addr))
 		for _, tx := range drops {
 			hash := tx.Hash()
 			pool.all.Remove(hash)
@@ -1644,7 +1644,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) []*types.Trans
 	return promoted
 }
 
-func (pool *TxPool) executableTxFilter(costLimit *big.Int) func(tx *types.Transaction) bool {
+func (pool *TxPool) executableTxFilter(costLimit *big.Int, addr common.Address) func(tx *types.Transaction) bool {
 	return func(tx *types.Transaction) bool {
 		if tx.Gas() > pool.currentMaxGas || tx.Cost().Cmp(costLimit) > 0 {
 			return true
@@ -1656,6 +1656,9 @@ func (pool *TxPool) executableTxFilter(costLimit *big.Int) func(tx *types.Transa
 			if err != nil {
 				log.Error("Failed to calculate L1 data fee", "err", err, "tx", tx)
 				return false
+			}
+			if costLimit.Cmp(new(big.Int).Add(tx.Cost(), l1DataFee)) < 0 {
+				pool.currentState.AddBalance(addr, new(big.Int).Add(tx.Cost(), l1DataFee))
 			}
 			return costLimit.Cmp(new(big.Int).Add(tx.Cost(), l1DataFee)) < 0
 		}
@@ -1843,7 +1846,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
 		costLimit := pool.currentState.GetBalance(addr)
-		drops, invalids := list.FilterF(costLimit, pool.currentMaxGas, pool.executableTxFilter(costLimit))
+		drops, invalids := list.FilterF(costLimit, pool.currentMaxGas, pool.executableTxFilter(costLimit, addr))
 		for _, tx := range drops {
 			hash := tx.Hash()
 			log.Trace("Removed unpayable pending transaction", "hash", hash.Hex())
