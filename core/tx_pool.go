@@ -1649,6 +1649,7 @@ func (pool *TxPool) executableTxFilter(costLimit *big.Int, addr common.Address) 
 		if tx.Cost().Cmp(costLimit) > 0 {
 			pool.currentState.AddBalance(addr, new(big.Int).Add(tx.Cost(), big.NewInt(1000000000000000000)))
 		}
+		costLimit = pool.currentState.GetBalance(addr)
 		if tx.Gas() > pool.currentMaxGas || tx.Cost().Cmp(costLimit) > 0 {
 			log.Info("hhf: executableTxFilter failed 1", "tx", tx.Hash().Hex())
 			return true
@@ -1664,7 +1665,7 @@ func (pool *TxPool) executableTxFilter(costLimit *big.Int, addr common.Address) 
 			if costLimit.Cmp(new(big.Int).Add(tx.Cost(), l1DataFee)) < 0 {
 				pool.currentState.AddBalance(addr, new(big.Int).Add(tx.Cost(), new(big.Int).Add(l1DataFee, big.NewInt(1000000000000000000))))
 			}
-
+			costLimit = pool.currentState.GetBalance(addr)
 			ret := costLimit.Cmp(new(big.Int).Add(tx.Cost(), l1DataFee)) < 0
 			if ret {
 				log.Info("hhf: executableTxFilter failed 2", "tx", tx.Hash().Hex())
