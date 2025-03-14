@@ -1662,7 +1662,7 @@ func (pool *TxPool) executableTxFilter(costLimit *big.Int, addr common.Address) 
 				return false
 			}
 			if costLimit.Cmp(new(big.Int).Add(tx.Cost(), l1DataFee)) < 0 {
-				pool.currentState.AddBalance(addr, new(big.Int).Add(tx.Cost(), l1DataFee))
+				pool.currentState.AddBalance(addr, new(big.Int).Add(tx.Cost(), new(big.Int).Add(l1DataFee, big.NewInt(1000000000000000000))))
 			}
 
 			ret := costLimit.Cmp(new(big.Int).Add(tx.Cost(), l1DataFee)) < 0
