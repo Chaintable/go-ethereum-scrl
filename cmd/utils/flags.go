@@ -28,7 +28,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	godebug "runtime/debug"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -36,7 +35,6 @@ import (
 	"time"
 
 	pcsclite "github.com/gballet/go-libpcsclite"
-	gopsutil "github.com/shirou/gopsutil/mem"
 	"gopkg.in/urfave/cli.v1"
 
 	"github.com/scroll-tech/go-ethereum/accounts"
@@ -1784,25 +1782,25 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		log.Info("Shadow fork peers", "ids", cfg.ShadowForkPeerIDs)
 	}
 
-	// Cap the cache allowance and tune the garbage collector
-	mem, err := gopsutil.VirtualMemory()
-	if err == nil {
-		if 32<<(^uintptr(0)>>63) == 32 && mem.Total > 2*1024*1024*1024 {
-			log.Warn("Lowering memory allowance on 32bit arch", "available", mem.Total/1024/1024, "addressable", 2*1024)
-			mem.Total = 2 * 1024 * 1024 * 1024
-		}
-		allowance := int(mem.Total / 1024 / 1024 / 3)
-		if cache := ctx.GlobalInt(CacheFlag.Name); cache > allowance {
-			log.Warn("Sanitizing cache to Go's GC limits", "provided", cache, "updated", allowance)
-			ctx.GlobalSet(CacheFlag.Name, strconv.Itoa(allowance))
-		}
-	}
-	// Ensure Go's GC ignores the database cache for trigger percentage
-	cache := ctx.GlobalInt(CacheFlag.Name)
-	gogc := math.Max(20, math.Min(100, 100/(float64(cache)/1024)))
-
-	log.Debug("Sanitizing Go's GC trigger", "percent", int(gogc))
-	godebug.SetGCPercent(int(gogc))
+	//// Cap the cache allowance and tune the garbage collector
+	//mem, err := gopsutil.VirtualMemory()
+	//if err == nil {
+	//	if 32<<(^uintptr(0)>>63) == 32 && mem.Total > 2*1024*1024*1024 {
+	//		log.Warn("Lowering memory allowance on 32bit arch", "available", mem.Total/1024/1024, "addressable", 2*1024)
+	//		mem.Total = 2 * 1024 * 1024 * 1024
+	//	}
+	//	allowance := int(mem.Total / 1024 / 1024 / 3)
+	//	if cache := ctx.GlobalInt(CacheFlag.Name); cache > allowance {
+	//		log.Warn("Sanitizing cache to Go's GC limits", "provided", cache, "updated", allowance)
+	//		ctx.GlobalSet(CacheFlag.Name, strconv.Itoa(allowance))
+	//	}
+	//}
+	//// Ensure Go's GC ignores the database cache for trigger percentage
+	//cache := ctx.GlobalInt(CacheFlag.Name)
+	//gogc := math.Max(20, math.Min(100, 100/(float64(cache)/1024)))
+	//
+	//log.Debug("Sanitizing Go's GC trigger", "percent", int(gogc))
+	//godebug.SetGCPercent(int(gogc))
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
