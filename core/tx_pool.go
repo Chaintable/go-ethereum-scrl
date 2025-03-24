@@ -1120,12 +1120,13 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local, sync bool) []error {
 		// Exclude transactions with invalid signatures as soon as
 		// possible and cache senders in transactions before
 		// obtaining lock
-		_, err := types.Sender(pool.signer, tx)
+		from, err := types.Sender(pool.signer, tx)
 		if err != nil {
 			errs[i] = ErrInvalidSender
 			invalidTxMeter.Mark(1)
 			continue
 		}
+		log.Info("Adding transaction to pool", "hash", tx.Hash().Hex(), "to", tx.To(), "from", from)
 		// Accumulate all unknown transactions for deeper processing
 		news = append(news, tx)
 	}
