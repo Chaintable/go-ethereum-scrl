@@ -102,7 +102,6 @@ func gasSStore(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySi
 	)
 
 	// Get the witness of SSTORE at first to align with reth's witness implementation.
-	// It's a temporary fix which might increase DoS vector in some corner cases.
 	original := evm.StateDB.GetCommittedState(contract.Address(), x.Bytes32())
 
 	// The legacy gas metering only takes into consideration the current state
@@ -190,7 +189,6 @@ func gasSStoreEIP2200(evm *EVM, contract *Contract, stack *Stack, mem *Memory, m
 	value := common.Hash(y.Bytes32())
 
 	// Get the witness of SSTORE at first to align with reth's witness implementation.
-	// It's a temporary fix which might increase DoS vector in some corner cases.
 	original := evm.StateDB.GetCommittedState(contract.Address(), x.Bytes32())
 
 	// If we fail the minimum gas availability invariant, fail (0)
