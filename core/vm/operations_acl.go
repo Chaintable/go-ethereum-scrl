@@ -36,6 +36,7 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 		)
 
 		// Get the witness of SSTORE at first to align with reth's witness implementation.
+		// It's a temporary fix which might increase DoS vector in some corner cases.
 		original := evm.StateDB.GetCommittedState(contract.Address(), x.Bytes32())
 
 		// If we fail the minimum gas availability invariant, fail (0)
@@ -109,18 +110,19 @@ func gasSLoadEIP2929(evm *EVM, contract *Contract, stack *Stack, mem *Memory, me
 	loc := stack.peek()
 	slot := common.Hash(loc.Bytes32())
 
-	// Get the witness of SLOAD at first to align with reth's witness implementation.
-	// Another place that needs to change is when calculating the gas cost after Frontier and before EIP-2929.
-	// Frontier gas cost simply uses params.SloadGasFrontier (i.e., 50 gas), so changing the gas cost there
-	// might affect code cleanliness. Usually, this won't be a problem because EIP-2929 is enabled by default.
-	// Thus, adding the SLOAD witness before EIP-2929 is left as a TODO here.
-	evm.StateDB.GetCommittedState(contract.Address(), loc.Bytes32())
-
 	// Check slot presence in the access list
 	if _, slotPresent := evm.StateDB.SlotInAccessList(contract.Address(), slot); !slotPresent {
 		// If the caller cannot afford the cost, this change will be rolled back
 		// If he does afford it, we can skip checking the same thing later on, during execution
 		evm.StateDB.AddSlotToAccessList(contract.Address(), slot)
+
+		// Get the witness of SLOAD at first to align with reth's witness implementation.
+		// Another place that needs to change is when calculating the gas cost after Frontier and before EIP-2929.
+		// Frontier gas cost simply uses params.SloadGasFrontier (i.e., 50 gas), so changing the gas cost there
+		// might affect code cleanliness. Usually, this won't be a problem because EIP-2929 is enabled by default.
+		// Thus, adding the SLOAD witness before EIP-2929 is left as a TODO here.
+		evm.StateDB.GetCommittedState(contract.Address(), loc.Bytes32())
+
 		return params.ColdSloadCostEIP2929, nil
 	}
 	return params.WarmStorageReadCostEIP2929, nil
