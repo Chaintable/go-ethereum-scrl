@@ -35,13 +35,13 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 			cost    = uint64(0)
 		)
 
+		// Get the witness of SSTORE at first to align with reth's witness implementation.
+		original := evm.StateDB.GetCommittedState(contract.Address(), x.Bytes32())
+
 		// If we fail the minimum gas availability invariant, fail (0)
 		if contract.Gas <= params.SstoreSentryGasEIP2200 {
 			return 0, errors.New("not enough gas for reentrancy sentry")
 		}
-
-		// Get the witness of SSTORE at first to align with reth's witness implementation.
-		original := evm.StateDB.GetCommittedState(contract.Address(), x.Bytes32())
 
 		// Check slot presence in the access list
 		if addrPresent, slotPresent := evm.StateDB.SlotInAccessList(contract.Address(), slot); !slotPresent {
