@@ -40,7 +40,7 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 			return 0, errors.New("not enough gas for reentrancy sentry")
 		}
 
-		// Get the witness of the SSTORE at first to align with reth's witness implementation.
+		// Get the witness of SSTORE at first to align with reth's witness implementation.
 		original := evm.StateDB.GetCommittedState(contract.Address(), x.Bytes32())
 
 		// Check slot presence in the access list
@@ -109,7 +109,7 @@ func gasSLoadEIP2929(evm *EVM, contract *Contract, stack *Stack, mem *Memory, me
 	loc := stack.peek()
 	slot := common.Hash(loc.Bytes32())
 
-	// Get the witness of the SLOAD at first to align with reth's witness implementation.
+	// Get the witness of SLOAD at first to align with reth's witness implementation.
 	// Another place that needs to change is when calculating the gas cost after Frontier and before EIP-2929.
 	// Frontier gas cost simply uses params.SloadGasFrontier (i.e., 50 gas), so changing the gas cost there
 	// might affect code cleanliness. Usually, this won't be a problem because EIP-2929 is enabled by default.
