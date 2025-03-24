@@ -104,6 +104,13 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 func gasSLoadEIP2929(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	loc := stack.peek()
 	slot := common.Hash(loc.Bytes32())
+
+	// Get the witness of SLOAD operation to align with revm witness
+	// Another place that needs to change is when calculating the gas cost after Frontier and before EIP-2929
+	// Frontier gas cost simply uses params.SloadGasFrontier (i.e. 50 gas), so changing the gas cost there would affect code cleanliness
+	// Usually this won't be a problem, leaving it as a TODO here.
+	evm.StateDB.GetCommittedState(contract.Address(), loc.Bytes32())
+
 	// Check slot presence in the access list
 	if _, slotPresent := evm.StateDB.SlotInAccessList(contract.Address(), slot); !slotPresent {
 		// If the caller cannot afford the cost, this change will be rolled back
