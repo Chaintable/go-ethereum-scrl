@@ -369,13 +369,12 @@ func generateWitness(blockchain *core.BlockChain, block *types.Block) (*stateles
 		return nil, fmt.Errorf("failed to validate block %d: %w", block.Number(), err)
 	}
 
-	for retries := 0; retries <= 3; retries++ {
-		err = testWitness(blockchain, block, witness)
-		if err == nil {
+	for retries := 0; retries < 5; retries++ {
+		if err = testWitness(blockchain, block, witness); err == nil {
 			return witness, nil
 		}
 	}
-	return witness, testWitness(blockchain, block, witness)
+	return witness, err
 }
 
 func testWitness(blockchain *core.BlockChain, block *types.Block, witness *stateless.Witness) error {
