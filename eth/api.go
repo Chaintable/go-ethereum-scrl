@@ -405,7 +405,12 @@ func testWitness(blockchain *core.BlockChain, block *types.Block, witness *state
 		postStateRoot = diskRoot
 	}
 	if statedb.GetRootHash() != postStateRoot {
-		return fmt.Errorf("state root mismatch after processing block %d (hash: %s): expected %s, got %s", block.Number(), block.Hash().Hex(), postStateRoot.Hex(), statedb.GetRootHash().Hex())
+		executionWitness := ToExecutionWitness(witness)
+		jsonStr, err := json.Marshal(executionWitness)
+		if err != nil {
+			return fmt.Errorf("state root mismatch after processing block %d (hash: %s): expected %s, got %s, but failed to marshal witness: %w", block.Number(), block.Hash().Hex(), postStateRoot.Hex(), statedb.GetRootHash().Hex(), err)
+		}
+		return fmt.Errorf("state root mismatch after processing block %d (hash: %s): expected %s, got %s, witness: %s", block.Number(), block.Hash().Hex(), postStateRoot.Hex(), statedb.GetRootHash().Hex(), string(jsonStr))
 	}
 	return nil
 }
