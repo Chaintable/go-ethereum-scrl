@@ -378,6 +378,7 @@ func testWitness(blockchain *core.BlockChain, block *types.Block, witness *state
 		return fmt.Errorf("failed to read disk state root for stateRoot %s: %w", stateRoot.Hex(), err)
 	}
 	if diskRoot != (common.Hash{}) {
+		log.Debug("Using disk root for state root", "stateRoot", stateRoot.Hex(), "diskRoot", diskRoot.Hex())
 		stateRoot = diskRoot
 	}
 
@@ -402,15 +403,17 @@ func testWitness(blockchain *core.BlockChain, block *types.Block, witness *state
 		return fmt.Errorf("failed to read disk state root for postStateRoot %s: %w", postStateRoot.Hex(), err)
 	}
 	if diskRoot != (common.Hash{}) {
+		log.Debug("Using disk root for post state root", "postStateRoot", postStateRoot.Hex(), "diskRoot", diskRoot.Hex())
 		postStateRoot = diskRoot
 	}
-	if statedb.GetRootHash() != postStateRoot {
+	computedRoot := statedb.IntermediateRoot(blockchain.Config().IsEIP158(block.Number()))
+	if computedRoot != postStateRoot {
 		executionWitness := ToExecutionWitness(witness)
 		jsonStr, err := json.Marshal(executionWitness)
 		if err != nil {
-			return fmt.Errorf("state root mismatch after processing block %d (hash: %s): expected %s, got %s, but failed to marshal witness: %w", block.Number(), block.Hash().Hex(), postStateRoot.Hex(), statedb.GetRootHash().Hex(), err)
+			return fmt.Errorf("state root mismatch after processing block %d (hash: %s): expected %s, got %s, but failed to marshal witness: %w", block.Number(), block.Hash().Hex(), postStateRoot.Hex(), computedRoot, err)
 		}
-		return fmt.Errorf("state root mismatch after processing block %d (hash: %s): expected %s, got %s, witness: %s", block.Number(), block.Hash().Hex(), postStateRoot.Hex(), statedb.GetRootHash().Hex(), string(jsonStr))
+		return fmt.Errorf("state root mismatch after processing block %d (hash: %s): expected %s, got %s, witness: %s", block.Number(), block.Hash().Hex(), postStateRoot.Hex(), computedRoot, string(jsonStr))
 	}
 	return nil
 }
