@@ -368,6 +368,13 @@ func generateWitness(blockchain *core.BlockChain, block *types.Block) (*stateles
 	if err := blockchain.Validator().ValidateState(block, statedb, receipts, usedGas); err != nil {
 		return nil, fmt.Errorf("failed to validate block %d: %w", block.Number(), err)
 	}
+
+	for retries := 0; retries <= 3; retries++ {
+		err = testWitness(blockchain, block, witness)
+		if err == nil {
+			return witness, nil
+		}
+	}
 	return witness, testWitness(blockchain, block, witness)
 }
 
@@ -408,6 +415,7 @@ func testWitness(blockchain *core.BlockChain, block *types.Block, witness *state
 	}
 	retryLimit := 5
 	for retries := 0; retries <= retryLimit; retries++ {
+		statedb.Commit(blockchain.Config().IsEIP158(block.Number()))
 		computedRoot := statedb.IntermediateRoot(blockchain.Config().IsEIP158(block.Number()))
 		if computedRoot == postStateRoot {
 			break
