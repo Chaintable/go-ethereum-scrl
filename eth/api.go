@@ -354,12 +354,10 @@ func generateWitness(blockchain *core.BlockChain, block *types.Block) (*stateles
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve parent state: %w", err)
 	}
+	statedb.WithWitness(witness)
 
 	// Collect storage locations that prover needs but sequencer might not touch necessarily
 	statedb.GetState(rcfg.L2MessageQueueAddress, rcfg.WithdrawTrieRootSlot)
-
-	statedb.StartPrefetcher("debug_execution_witness", witness)
-	defer statedb.StopPrefetcher()
 
 	receipts, _, usedGas, err := blockchain.Processor().Process(block, statedb, *blockchain.GetVMConfig())
 	if err != nil {
