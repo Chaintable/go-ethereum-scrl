@@ -1533,17 +1533,14 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 				}
 				reinject = types.TxDifference(discarded, included)
 
-				if len(discarded) > 0 {
-					for _, tx := range discarded {
-						log.Debug("TXPOOL_REORG: TX removed from old chain", "hash", tx.Hash().Hex())
-					}
+				for _, tx := range discarded {
+					log.Debug("TXPOOL_REORG: TX removed from old chain", "hash", tx.Hash().Hex())
 				}
 
-				if len(included) > 0 {
-					for _, tx := range included {
-						log.Debug("TXPOOL_REORG: TX added in the chain", "hash", tx.Hash().Hex())
-					}
+				for _, tx := range included {
+					log.Debug("TXPOOL_REORG: TX added in the chain", "hash", tx.Hash().Hex())
 				}
+
 			}
 		}
 	}
