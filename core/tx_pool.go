@@ -1558,7 +1558,9 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.currentMaxGas = newHead.GasLimit
 
 	// Inject any transactions discarded due to reorgs
-	log.Debug("Reinjecting stale transactions", "count", len(reinject))
+	if len(reinject) > 0 {
+		log.Debug("Reinjecting stale transactions", "count", len(reinject))
+	}
 	senderCacher.recover(pool.signer, reinject)
 	pool.addTxsLocked(reinject, false)
 
@@ -1594,7 +1596,9 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) []*types.Trans
 			hash := tx.Hash()
 			pool.all.Remove(hash)
 			pool.calculateTxsLifecycle(types.Transactions{tx}, time.Now())
-			log.Debug("Removed queued transaction with low nonce", "hash", hash.Hex())
+			// This is a special case where the transaction was already included in a block,
+			// thus no need to mark it as removed, setting a trace log level to avoid confusion.
+			log.Trace("Removed queued transaction with low nonce", "hash", hash.Hex())
 		}
 		log.Trace("Removed old queued transactions", "count", len(forwards))
 
@@ -1847,7 +1851,9 @@ func (pool *TxPool) demoteUnexecutables() {
 			hash := tx.Hash()
 			pool.all.Remove(hash)
 			pool.calculateTxsLifecycle(types.Transactions{tx}, time.Now())
-			log.Debug("Removed pending transaction with low nonce", "hash", hash.Hex())
+			// This is a special case where the transaction was already included in a block,
+			// thus no need to mark it as removed, setting a trace log level to avoid confusion.
+			log.Trace("Removed pending transaction with low nonce", "hash", hash.Hex())
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
 		costLimit := pool.currentState.GetBalance(addr)
