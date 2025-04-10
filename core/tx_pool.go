@@ -435,7 +435,7 @@ func (pool *TxPool) loop() {
 				pool.requestReset(head.Header(), ev.Block.Header())
 				head = ev.Block
 				for _, tx := range head.Transactions() {
-					log.Debug("tx added in the chain", "hash", tx.Hash().Hex())
+					log.Debug("TX is included in a block", "hash", tx.Hash().Hex())
 				}
 			}
 
@@ -1537,7 +1537,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 				reinject = types.TxDifference(discarded, included)
 
 				for _, tx := range reinject {
-					log.Debug("tx removed from old chain due to reorg", "hash", tx.Hash().Hex())
+					log.Debug("TX is removed from old chain due to reorg", "hash", tx.Hash().Hex())
 				}
 			}
 		}
