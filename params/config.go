@@ -326,10 +326,10 @@ var (
 		ShanghaiBlock:       big.NewInt(0),
 		BernoulliBlock:      big.NewInt(3747132),
 		CurieBlock:          big.NewInt(4740239),
-		DarwinTime:          newUint64(1723622400),
-		DarwinV2Time:        newUint64(1724832000),
-		EuclidTime:          newUint64(1741680000),
-		EuclidV2Time:        newUint64(1741852800),
+		DarwinTime:          newUint64(1723622400 * 1000),
+		DarwinV2Time:        newUint64(1724832000 * 1000),
+		EuclidTime:          newUint64(1741680000 * 1000),
+		EuclidV2Time:        newUint64(1741852800 * 1000),
 		Clique: &CliqueConfig{
 			Period: 3,
 			Epoch:  30000,
@@ -376,10 +376,10 @@ var (
 		ShanghaiBlock:       big.NewInt(0),
 		BernoulliBlock:      big.NewInt(5220340),
 		CurieBlock:          big.NewInt(7096836),
-		DarwinTime:          newUint64(1724227200),
-		DarwinV2Time:        newUint64(1725264000),
-		EuclidTime:          newUint64(1744815600),
-		EuclidV2Time:        newUint64(1745305200),
+		DarwinTime:          newUint64(1724227200 * 1000),
+		DarwinV2Time:        newUint64(1725264000 * 1000),
+		EuclidTime:          newUint64(1744815600 * 1000),
+		EuclidV2Time:        newUint64(1745305200 * 1000),
 		Clique: &CliqueConfig{
 			Period: 3,
 			Epoch:  30000,
@@ -797,7 +797,7 @@ func (c *CliqueConfig) String() string {
 
 // SystemContractConfig is the consensus engine configs for rollup sequencer sealing.
 type SystemContractConfig struct {
-	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
+	Period uint64 `json:"period"` // Number of milliseconds between blocks to enforce
 
 	SystemContractAddress common.Address `json:"system_contract_address"` // address of system contract on L1
 	SystemContractSlot    common.Hash    `json:"system_contract_slot"`    // slot of signer address in system contract on L1

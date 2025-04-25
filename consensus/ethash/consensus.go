@@ -44,7 +44,7 @@ var (
 	ByzantiumBlockReward          = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 	ConstantinopleBlockReward     = big.NewInt(2e+18) // Block reward in wei for successfully mining a block upward from Constantinople
 	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block
-	allowedFutureBlockTimeSeconds = int64(15)         // Max seconds from current time allowed for blocks, before they're considered future blocks
+	allowedFutureBlockTimeSeconds = int64(15 * 1000)  // Max milliseconds from current time allowed for blocks, before they're considered future blocks (previously 15 seconds)
 
 	// calcDifficultyEip4345 is the difficulty adjustment algorithm as specified by EIP 4345.
 	// It offsets the bomb a total of 10.7M blocks.
@@ -113,7 +113,7 @@ func (ethash *Ethash) VerifyHeader(chain consensus.ChainHeaderReader, header *ty
 		return consensus.ErrUnknownAncestor
 	}
 	// Sanity checks passed, do a proper verification
-	return ethash.verifyHeader(chain, header, parent, false, seal, time.Now().Unix())
+	return ethash.verifyHeader(chain, header, parent, false, seal, time.Now().UnixMilli())
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers

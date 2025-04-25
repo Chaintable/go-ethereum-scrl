@@ -118,7 +118,7 @@ func (s *SystemContract) verifyHeader(chain consensus.ChainHeaderReader, header 
 	// Don't waste time checking blocks from the future.
 	// We add 100ms leeway since the scroll_worker internal timers might trigger early.
 	now := time.Now()
-	if header.Time > uint64(now.Unix()) && time.Unix(int64(header.Time), 0).Sub(now) > 100*time.Millisecond {
+	if header.Time > uint64(now.UnixMilli()) && time.UnixMilli(int64(header.Time)).Sub(now) > 100*time.Millisecond {
 		return consensus.ErrFutureBlock
 	}
 	// Ensure that the coinbase is zero
@@ -226,12 +226,12 @@ func (s *SystemContract) VerifyUncles(chain consensus.ChainReader, block *types.
 }
 
 func (s *SystemContract) CalcTimestamp(parent *types.Header) uint64 {
-	timestamp := parent.Time + s.config.Period
+	timestamp := parent.Time + s.config.Period*1000 // Convert period from seconds to milliseconds
 
 	// If RelaxedPeriod is enabled, always set the header timestamp to now (ie the time we start building it) as
 	// we don't know when it will be sealed
-	if s.config.RelaxedPeriod || timestamp < uint64(time.Now().Unix()) {
-		timestamp = uint64(time.Now().Unix())
+	if s.config.RelaxedPeriod || timestamp < uint64(time.Now().UnixMilli()) {
+		timestamp = uint64(time.Now().UnixMilli())
 	}
 
 	return timestamp
@@ -312,7 +312,7 @@ func (s *SystemContract) Seal(chain consensus.ChainHeaderReader, block *types.Bl
 	}
 
 	// Sweet, the protocol permits us to sign the block, wait for our time
-	delay := time.Unix(int64(header.Time), 0).Sub(time.Now()) // nolint: gosimple
+	delay := time.UnixMilli(int64(header.Time)).Sub(time.Now()) // nolint: gosimple
 
 	// Sign all the things!
 	sighash, err := signFn(accounts.Account{Address: signer}, accounts.MimetypeClique, SystemContractRLP(header))

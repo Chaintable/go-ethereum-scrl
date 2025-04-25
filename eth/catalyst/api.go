@@ -121,8 +121,8 @@ func (api *consensusAPI) AssembleBlock(params assembleBlockParams) (*executableD
 	if parent.Time() >= params.Timestamp {
 		return nil, fmt.Errorf("child timestamp lower than parent's: %d >= %d", parent.Time(), params.Timestamp)
 	}
-	if now := uint64(time.Now().Unix()); params.Timestamp > now+1 {
-		wait := time.Duration(params.Timestamp-now) * time.Second
+	if now := uint64(time.Now().UnixMilli()); params.Timestamp > now+1000 { // 1 second buffer in milliseconds
+		wait := time.Duration(params.Timestamp-now) * time.Millisecond
 		log.Info("Producing block too far in the future", "wait", common.PrettyDuration(wait))
 		time.Sleep(wait)
 	}

@@ -1275,7 +1275,8 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	parent := bc.GetHeaderByHash(block.ParentHash())
 	// block.Time is guaranteed to be larger than parent.Time,
 	// and the time gap should fit into int64.
-	gap := int64(block.Time() - parent.Time)
+	// Convert milliseconds to seconds for the time gap metric (keeping the same scale)
+	gap := int64((block.Time() - parent.Time) / 1000)
 	headTimeGapGauge.Update(gap)
 
 	// Calculate the total difficulty of the block

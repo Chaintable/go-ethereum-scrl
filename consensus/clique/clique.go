@@ -257,7 +257,7 @@ func (c *Clique) verifyHeader(chain consensus.ChainHeaderReader, header *types.H
 	// Don't waste time checking blocks from the future.
 	// We add 100ms leeway since the scroll_worker internal timers might trigger early.
 	now := time.Now()
-	if header.Time > uint64(now.Unix()) && time.Unix(int64(header.Time), 0).Sub(now) > 100*time.Millisecond {
+	if header.Time > uint64(now.UnixMilli()) && time.UnixMilli(int64(header.Time)).Sub(now) > 100*time.Millisecond {
 		return consensus.ErrFutureBlock
 	}
 	// Checkpoint blocks need to enforce zero beneficiary
@@ -508,12 +508,12 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 }
 
 func (c *Clique) CalcTimestamp(parent *types.Header) uint64 {
-	timestamp := parent.Time + c.config.Period
+	timestamp := parent.Time + c.config.Period*1000 // Convert period from seconds to milliseconds
 
 	// If RelaxedPeriod is enabled, always set the header timestamp to now (ie the time we start building it) as
 	// we don't know when it will be sealed
-	if c.config.RelaxedPeriod || timestamp < uint64(time.Now().Unix()) {
-		timestamp = uint64(time.Now().Unix())
+	if c.config.RelaxedPeriod || timestamp < uint64(time.Now().UnixMilli()) {
+		timestamp = uint64(time.Now().UnixMilli())
 	}
 
 	return timestamp
@@ -657,7 +657,7 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 		}
 	}
 	// Sweet, the protocol permits us to sign the block, wait for our time
-	delay := time.Unix(int64(header.Time), 0).Sub(time.Now()) // nolint: gosimple
+	delay := time.UnixMilli(int64(header.Time)).Sub(time.Now()) // nolint: gosimple
 	if header.Difficulty.Cmp(diffNoTurn) == 0 {
 		// It's not our turn explicitly to sign, delay it a bit
 		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
