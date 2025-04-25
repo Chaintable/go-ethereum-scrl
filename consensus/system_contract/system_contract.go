@@ -2,7 +2,6 @@ package system_contract
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -89,34 +88,35 @@ func (s *SystemContract) Start() {
 }
 
 func (s *SystemContract) fetchAddressFromL1() error {
-	address, err := s.client.StorageAt(s.ctx, s.config.SystemContractAddress, s.config.SystemContractSlot, nil)
-	if err != nil {
-		return fmt.Errorf("failed to get signer address from L1 System Contract: %w", err)
-	}
-	bAddress := common.BytesToAddress(address)
-
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	// Validate the address is not empty
-	if bAddress == (common.Address{}) {
-		log.Debug("Retrieved empty signer address from L1 System Contract", "contract", s.config.SystemContractAddress.Hex(), "slot", s.config.SystemContractSlot.Hex())
-
-		// Not initialized yet -- we don't consider this an error
-		if s.signerAddressL1 == (common.Address{}) {
-			log.Warn("System Contract signer address not initialized")
-			return nil
-		}
-
-		return fmt.Errorf("retrieved empty signer address from L1 System Contract")
-	}
-
-	log.Debug("Read address from system contract", "address", bAddress.Hex())
-
-	if s.signerAddressL1 != bAddress {
-		s.signerAddressL1 = bAddress
-		log.Info("Updated new signer from L1 system contract", "signer", bAddress.Hex())
-	}
+	s.signerAddressL1 = common.HexToAddress("0x756EA06BDEe36de11F22DCca45a31d8a178eF3c6")
+	//address, err := s.client.StorageAt(s.ctx, s.config.SystemContractAddress, s.config.SystemContractSlot, nil)
+	//if err != nil {
+	//	return fmt.Errorf("failed to get signer address from L1 System Contract: %w", err)
+	//}
+	//bAddress := common.BytesToAddress(address)
+	//
+	//s.lock.Lock()
+	//defer s.lock.Unlock()
+	//
+	//// Validate the address is not empty
+	//if bAddress == (common.Address{}) {
+	//	log.Debug("Retrieved empty signer address from L1 System Contract", "contract", s.config.SystemContractAddress.Hex(), "slot", s.config.SystemContractSlot.Hex())
+	//
+	//	// Not initialized yet -- we don't consider this an error
+	//	if s.signerAddressL1 == (common.Address{}) {
+	//		log.Warn("System Contract signer address not initialized")
+	//		return nil
+	//	}
+	//
+	//	return fmt.Errorf("retrieved empty signer address from L1 System Contract")
+	//}
+	//
+	//log.Debug("Read address from system contract", "address", bAddress.Hex())
+	//
+	//if s.signerAddressL1 != bAddress {
+	//	s.signerAddressL1 = bAddress
+	//	log.Info("Updated new signer from L1 system contract", "signer", bAddress.Hex())
+	//}
 
 	return nil
 }
