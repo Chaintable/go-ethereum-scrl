@@ -552,6 +552,7 @@ func (w *worker) newWork(now time.Time, parentHash common.Hash, reorging bool, r
 		vmConfig.Debug = true
 		vmConfig.Tracer = cccLogger
 	}
+
 	deadline := time.Unix(int64(header.Time), 0)
 	if w.chainConfig.Clique != nil && w.chainConfig.Clique.RelaxedPeriod {
 		// clique with relaxed period uses time.Now() as the header.Time, calculate the deadline
@@ -559,7 +560,7 @@ func (w *worker) newWork(now time.Time, parentHash common.Hash, reorging bool, r
 	}
 	if w.chainConfig.SystemContract != nil && w.chainConfig.SystemContract.RelaxedPeriod {
 		// system contract with relaxed period uses time.Now() as the header.Time, calculate the deadline
-		deadline = time.Unix(int64(header.Time+w.chainConfig.SystemContract.Period), 0)
+		deadline = time.UnixMilli(int64(header.Time*1000 + w.chainConfig.SystemContract.Period))
 	}
 
 	w.current = &work{
