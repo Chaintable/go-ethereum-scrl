@@ -560,7 +560,7 @@ func (w *worker) newWork(now time.Time, parentHash common.Hash, reorging bool, r
 	}
 	if w.chainConfig.SystemContract != nil && w.chainConfig.SystemContract.RelaxedPeriod {
 		// system contract with relaxed period uses time.Now() as the header.Time, calculate the deadline
-		deadline = time.UnixMilli(int64(header.Time*1000 + 500*((header.Number.Uint64()+1)%2+1) + w.chainConfig.SystemContract.Period))
+		deadline = time.UnixMilli(int64(header.Time*1000 + 500*((header.Number.Uint64()+1)%2) + w.chainConfig.SystemContract.Period))
 	}
 
 	w.current = &work{
