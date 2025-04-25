@@ -226,15 +226,23 @@ func (s *SystemContract) VerifyUncles(chain consensus.ChainReader, block *types.
 }
 
 func (s *SystemContract) CalcTimestamp(parent *types.Header) uint64 {
-	timestamp := parent.Time + s.config.Period
+	timestamp := parent.Time
 
-	// If RelaxedPeriod is enabled, always set the header timestamp to now (ie the time we start building it) as
-	// we don't know when it will be sealed
-	if s.config.RelaxedPeriod || timestamp < uint64(time.Now().Unix()) {
-		timestamp = uint64(time.Now().Unix())
+	if parent.Number.Uint64()%2 == 0 {
+		timestamp += 1
 	}
 
 	return timestamp
+
+	//timestamp := parent.Time + s.config.Period
+	//
+	//// If RelaxedPeriod is enabled, always set the header timestamp to now (ie the time we start building it) as
+	//// we don't know when it will be sealed
+	//if s.config.RelaxedPeriod || timestamp < uint64(time.Now().Unix()) {
+	//	timestamp = uint64(time.Now().Unix())
+	//}
+	//
+	//return timestamp
 }
 
 // Prepare initializes the consensus fields of a block header according to the
