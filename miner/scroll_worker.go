@@ -558,8 +558,23 @@ func (w *worker) newWork(now time.Time, parentHash common.Hash, reorging bool, r
 		deadline = time.Unix(int64(header.Time+w.chainConfig.Clique.Period), 0)
 	}
 	if w.chainConfig.SystemContract != nil && w.chainConfig.SystemContract.RelaxedPeriod {
-		// system contract with relaxed period uses time.Now() as the header.Time, calculate the deadline
-		deadline = time.Unix(int64(header.Time+w.chainConfig.SystemContract.Period), 0)
+		periodMs := w.chainConfig.SystemContract.Period
+		blocksPerSecond := uint64(1000) / periodMs
+		if blocksPerSecond == 0 {
+			blocksPerSecond = 1
+		}
+
+		// Calculate the actual timing based on block number within the current second
+		blockIndex := header.Number.Uint64() % blocksPerSecond
+
+		// Calculate base time and add the fraction of a second based on block index
+		baseTimeNano := int64(header.Time) * int64(time.Second)
+		fractionNano := int64(blockIndex) * int64(periodMs) * int64(time.Millisecond)
+
+		// Add one period to determine the deadline
+		nextBlockNano := baseTimeNano + fractionNano + int64(periodMs)*int64(time.Millisecond)
+
+		deadline = time.Unix(0, nextBlockNano)
 	}
 
 	w.current = &work{
