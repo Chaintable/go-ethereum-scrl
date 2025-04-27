@@ -246,7 +246,8 @@ func (s *SystemContract) CalcTimestamp(parent *types.Header) uint64 {
 		baseTimestamp++
 	}
 
-	// If RelaxedPeriod is enabled, always set the header timestamp to now
+	// If RelaxedPeriod is enabled, always set the header timestamp to now (ie the time we start building it) as
+	// we don't know when it will be sealed
 	nowTimestamp := uint64(time.Now().Unix())
 	if s.config.RelaxedPeriod || baseTimestamp < nowTimestamp {
 		baseTimestamp = nowTimestamp
