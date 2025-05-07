@@ -368,6 +368,7 @@ func (w *worker) mainLoop() {
 				// `updateSnapshot` and other functionalities.
 				time.Sleep(5 * time.Second)
 			}
+			log.Info("hhff", "retrying commit", "err", err, "retryableCommitError", retryableCommitError)
 			if _, err = w.tryCommitNewWork(time.Now(), w.current.header.ParentHash, w.current.reorging, w.current.reorgReason); err != nil {
 				continue
 			}
@@ -393,6 +394,7 @@ func (w *worker) mainLoop() {
 		case chainHead := <-w.chainHeadCh:
 			idleTimer.UpdateSince(idleStart)
 			if w.isCanonical(chainHead.Block.Header()) {
+				log.Info("hhff", "chainHead", "number", chainHead.Block.Number(), "hash", chainHead.Block.Hash().Hex())
 				_, err = w.tryCommitNewWork(time.Now(), chainHead.Block.Hash(), false, nil)
 			}
 		case <-w.current.deadlineCh():
@@ -1148,6 +1150,7 @@ func (w *worker) handleReorg(trigger *reorgTrigger) error {
 			return nil
 		}
 
+		log.Info("hhff tryCommitNewWork", "parentHash", parentHash, "reorgReason", reorgReason)
 		newBlockHash, err := w.tryCommitNewWork(time.Now(), parentHash, true, reorgReason)
 		if err != nil {
 			return err
@@ -1157,6 +1160,7 @@ func (w *worker) handleReorg(trigger *reorgTrigger) error {
 		if newBlockHash == (common.Hash{}) {
 			// force committing the new canonical head to trigger a reorg in blockchain
 			// otherwise we might ignore CCC errors from the new side chain since it is not canonical yet
+			log.Info("hhff", "newBlockHash", newBlockHash, "reorgReason", reorgReason)
 			newBlockHash, err = w.commit()
 			if err != nil {
 				return err
