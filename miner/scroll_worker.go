@@ -399,6 +399,7 @@ func (w *worker) mainLoop() {
 			idleTimer.UpdateSince(idleStart)
 			w.current.deadlineReached = true
 			if len(w.current.txs) > 0 {
+				log.Info("hhff", "deadlineReached", w.current.deadlineReached, "len(w.current.txs)", len(w.current.txs))
 				_, err = w.commit()
 			} else if w.config.AllowEmpty {
 				log.Warn("Committing empty block", "number", w.current.header.Number)
@@ -414,6 +415,7 @@ func (w *worker) mainLoop() {
 			if w.current != nil {
 				shouldCommit, _ := w.processTxnSlice(ev.Txs)
 				if shouldCommit || (w.current.deadlineReached && len(w.current.txs) > 0) {
+					log.Info("hhff", "shouldCommit", shouldCommit, "deadlineReached", w.current.deadlineReached, "len(w.current.txs)", len(w.current.txs))
 					_, err = w.commit()
 				}
 			}
