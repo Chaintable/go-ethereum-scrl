@@ -630,6 +630,7 @@ func (w *worker) tryCommitNewWork(now time.Time, parent common.Hash, reorging bo
 	}
 
 	if shouldCommit {
+		log.Info("hhff", "tryCommitNewWork done", "shouldCommit", shouldCommit, "reorging", reorging, "reorgReason", reorgReason)
 		// if reorging, force committing even if we are not "running"
 		// this can happen when sequencer is instructed to shutdown while handling a reorg
 		// we should make sure reorg is not interrupted
