@@ -613,10 +613,16 @@ func (w *worker) tryCommitNewWork(now time.Time, parent common.Hash, reorging bo
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed handling forks: %w", err)
 	}
+	if shouldCommit {
+		log.Info("hhff", "handleForks")
+	}
 
 	// check if we are reorging
 	if !shouldCommit && w.current.reorging {
 		shouldCommit, err = w.processReorgedTxns(w.current.reorgReason)
+		if shouldCommit {
+			log.Info("hhff", "processReorgedTxns")
+		}
 	}
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed handling reorged txns: %w", err)
@@ -624,6 +630,9 @@ func (w *worker) tryCommitNewWork(now time.Time, parent common.Hash, reorging bo
 
 	if !shouldCommit {
 		shouldCommit, err = w.processTxPool()
+		if shouldCommit {
+			log.Info("hhff", "processTxPool")
+		}
 	}
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed processing tx pool: %w", err)
