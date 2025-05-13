@@ -368,7 +368,6 @@ func (w *worker) mainLoop() {
 				// `updateSnapshot` and other functionalities.
 				time.Sleep(5 * time.Second)
 			}
-			log.Info("hhff", "retrying commit", "err", err, "retryableCommitError", retryableCommitError)
 			if _, err = w.tryCommitNewWork(time.Now(), w.current.header.ParentHash, w.current.reorging, w.current.reorgReason); err != nil {
 				continue
 			}
@@ -394,14 +393,12 @@ func (w *worker) mainLoop() {
 		case chainHead := <-w.chainHeadCh:
 			idleTimer.UpdateSince(idleStart)
 			if w.isCanonical(chainHead.Block.Header()) {
-				log.Info("hhff", "chainHead", "number", chainHead.Block.Number(), "hash", chainHead.Block.Hash().Hex())
 				_, err = w.tryCommitNewWork(time.Now(), chainHead.Block.Hash(), false, nil)
 			}
 		case <-w.current.deadlineCh():
 			idleTimer.UpdateSince(idleStart)
 			w.current.deadlineReached = true
 			if len(w.current.txs) > 0 {
-				log.Info("hhff", "deadlineReached", w.current.deadlineReached, "len(w.current.txs)", len(w.current.txs))
 				_, err = w.commit()
 			} else if w.config.AllowEmpty {
 				log.Warn("Committing empty block", "number", w.current.header.Number)
@@ -417,7 +414,6 @@ func (w *worker) mainLoop() {
 			if w.current != nil {
 				shouldCommit, _ := w.processTxnSlice(ev.Txs)
 				if shouldCommit || (w.current.deadlineReached && len(w.current.txs) > 0) {
-					log.Info("hhff", "shouldCommit", shouldCommit, "deadlineReached", w.current.deadlineReached, "len(w.current.txs)", len(w.current.txs))
 					_, err = w.commit()
 				}
 			}
@@ -613,16 +609,10 @@ func (w *worker) tryCommitNewWork(now time.Time, parent common.Hash, reorging bo
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed handling forks: %w", err)
 	}
-	if shouldCommit {
-		log.Info("hhff", "handleForks")
-	}
 
 	// check if we are reorging
 	if !shouldCommit && w.current.reorging {
 		shouldCommit, err = w.processReorgedTxns(w.current.reorgReason)
-		if shouldCommit {
-			log.Info("hhff", "processReorgedTxns")
-		}
 	}
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed handling reorged txns: %w", err)
@@ -630,16 +620,12 @@ func (w *worker) tryCommitNewWork(now time.Time, parent common.Hash, reorging bo
 
 	if !shouldCommit {
 		shouldCommit, err = w.processTxPool()
-		if shouldCommit {
-			log.Info("hhff", "processTxPool")
-		}
 	}
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed processing tx pool: %w", err)
 	}
 
 	if shouldCommit {
-		log.Info("hhff", "tryCommitNewWork done", "shouldCommit", shouldCommit, "reorging", reorging, "reorgReason", reorgReason)
 		// if reorging, force committing even if we are not "running"
 		// this can happen when sequencer is instructed to shutdown while handling a reorg
 		// we should make sure reorg is not interrupted
@@ -1160,7 +1146,6 @@ func (w *worker) handleReorg(trigger *reorgTrigger) error {
 			return nil
 		}
 
-		log.Info("hhff tryCommitNewWork", "parentHash", parentHash, "reorgReason", reorgReason)
 		newBlockHash, err := w.tryCommitNewWork(time.Now(), parentHash, true, reorgReason)
 		if err != nil {
 			return err
@@ -1170,7 +1155,6 @@ func (w *worker) handleReorg(trigger *reorgTrigger) error {
 		if newBlockHash == (common.Hash{}) {
 			// force committing the new canonical head to trigger a reorg in blockchain
 			// otherwise we might ignore CCC errors from the new side chain since it is not canonical yet
-			log.Info("hhff", "newBlockHash", newBlockHash, "reorgReason", reorgReason)
 			newBlockHash, err = w.commit()
 			if err != nil {
 				return err
