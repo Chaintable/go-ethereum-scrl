@@ -42,11 +42,15 @@ const (
 
 	// defaultLogInterval is the frequency at which we print the latest processed block.
 	defaultLogInterval = 5 * time.Minute
+
+	// rewindL1Height is the number of blocks to rewind the L1 sync height when a missing batch event is detected.
+	rewindL1Height = 10
 )
 
 var (
 	finalizedBlockGauge      = metrics.NewRegisteredGauge("chain/head/finalized", nil)
 	ErrShouldResetSyncHeight = errors.New("ErrShouldResetSyncHeight")
+	ErrMissingBatchEvent     = errors.New("ErrMissingBatchEvent")
 )
 
 // RollupSyncService collects ScrollChain batch commit/revert/finalize events and stores metadata into db.
@@ -223,6 +227,16 @@ func (s *RollupSyncService) fetchRollupEvents() error {
 
 				return nil
 			}
+			if errors.Is(err, ErrMissingBatchEvent) {
+				// If there's a missing batch event, rewind the L1 sync height by some blocks to re-fetch from L1 RPC and
+				// replay creating corresponding CommittedBatchMeta in local DB.
+				// This happens recursively until the missing event has been recovered as we will call fetchRollupEvents again
+				// with the `L1Height = prevL1Height - rewindL1Height`.
+				s.callDataBlobSource.SetL1Height(prevL1Height - rewindL1Height)
+
+				return fmt.Errorf("missing batch event, rewinding L1 sync height by %d blocks: %w", rewindL1Height, err)
+			}
+
 			// Reset the L1 height to the previous value to retry fetching the same data.
 			s.callDataBlobSource.SetL1Height(prevL1Height)
 			return fmt.Errorf("failed to parse and update rollup event logs: %w", err)
@@ -297,12 +311,18 @@ func (s *RollupSyncService) updateRollupEvents(daEntries da.Entries) error {
 				var err error
 				if index > 0 {
 					if parentCommittedBatchMeta, err = rawdb.ReadCommittedBatchMeta(s.db, index-1); err != nil {
-						return fmt.Errorf("failed to read parent committed batch meta, batch index: %v, err: %w", index-1, err)
+						return fmt.Errorf("failed to read parent committed batch meta, batch index: %v, err: %w", index-1, errors.Join(ErrMissingBatchEvent, err))
+					}
+					if parentCommittedBatchMeta == nil {
+						return fmt.Errorf("parent committed batch meta = nil, batch index: %v, err: %w", index-1, ErrMissingBatchEvent)
 					}
 				}
 				committedBatchMeta, err := rawdb.ReadCommittedBatchMeta(s.db, index)
 				if err != nil {
-					return fmt.Errorf("failed to read committed batch meta, batch index: %v, err: %w", index, err)
+					return fmt.Errorf("failed to read committed batch meta, batch index: %v, err: %w", index, errors.Join(ErrMissingBatchEvent, err))
+				}
+				if committedBatchMeta == nil {
+					return fmt.Errorf("committed batch meta = nil, batch index: %v, err: %w\"", index, ErrMissingBatchEvent)
 				}
 
 				chunks, err := s.getLocalChunksForBatch(committedBatchMeta.ChunkBlockRanges)
@@ -447,7 +467,10 @@ func (s *RollupSyncService) getCommittedBatchMeta(commitedBatch da.EntryWithBloc
 	if commitedBatch.Version() == encoding.CodecV7 {
 		parentCommittedBatchMeta, err := rawdb.ReadCommittedBatchMeta(s.db, commitedBatch.BatchIndex()-1)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read parent committed batch meta, batch index: %v, err: %w", commitedBatch.BatchIndex()-1, err)
+			return nil, fmt.Errorf("failed to read parent committed batch meta, batch index: %v, err: %w", commitedBatch.BatchIndex()-1, errors.Join(ErrMissingBatchEvent, err))
+		}
+		if parentCommittedBatchMeta == nil {
+			return nil, fmt.Errorf("parent committed batch meta = nil, batch index: %v, err: %w\"", commitedBatch.BatchIndex()-1, ErrMissingBatchEvent)
 		}
 
 		// If parent batch has a lower version this means this is the first batch of CodecV7.
