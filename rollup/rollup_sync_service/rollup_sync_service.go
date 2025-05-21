@@ -322,7 +322,7 @@ func (s *RollupSyncService) updateRollupEvents(daEntries da.Entries) error {
 					return fmt.Errorf("failed to read committed batch meta, batch index: %v, err: %w", index, errors.Join(ErrMissingBatchEvent, err))
 				}
 				if committedBatchMeta == nil {
-					return fmt.Errorf("committed batch meta = nil, batch index: %v, err: %w\"", index, ErrMissingBatchEvent)
+					return fmt.Errorf("committed batch meta = nil, batch index: %v, err: %w", index, ErrMissingBatchEvent)
 				}
 
 				chunks, err := s.getLocalChunksForBatch(committedBatchMeta.ChunkBlockRanges)
@@ -470,7 +470,7 @@ func (s *RollupSyncService) getCommittedBatchMeta(commitedBatch da.EntryWithBloc
 			return nil, fmt.Errorf("failed to read parent committed batch meta, batch index: %v, err: %w", commitedBatch.BatchIndex()-1, errors.Join(ErrMissingBatchEvent, err))
 		}
 		if parentCommittedBatchMeta == nil {
-			return nil, fmt.Errorf("parent committed batch meta = nil, batch index: %v, err: %w\"", commitedBatch.BatchIndex()-1, ErrMissingBatchEvent)
+			return nil, fmt.Errorf("parent committed batch meta = nil, batch index: %v, err: %w", commitedBatch.BatchIndex()-1, ErrMissingBatchEvent)
 		}
 
 		// If parent batch has a lower version this means this is the first batch of CodecV7.
