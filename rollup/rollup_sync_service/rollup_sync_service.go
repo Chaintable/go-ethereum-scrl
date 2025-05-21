@@ -44,7 +44,7 @@ const (
 	defaultLogInterval = 5 * time.Minute
 
 	// rewindL1Height is the number of blocks to rewind the L1 sync height when a missing batch event is detected.
-	rewindL1Height = 10
+	rewindL1Height = 100
 )
 
 var (
@@ -234,7 +234,7 @@ func (s *RollupSyncService) fetchRollupEvents() error {
 				// with the `L1Height = prevL1Height - rewindL1Height`.
 				s.callDataBlobSource.SetL1Height(prevL1Height - rewindL1Height)
 
-				return fmt.Errorf("missing batch event, rewinding L1 sync height by %d blocks: %w", rewindL1Height, err)
+				return fmt.Errorf("missing batch event, rewinding L1 sync height by %d blocks to %d: %w", rewindL1Height, prevL1Height-rewindL1Height, err)
 			}
 
 			// Reset the L1 height to the previous value to retry fetching the same data.
