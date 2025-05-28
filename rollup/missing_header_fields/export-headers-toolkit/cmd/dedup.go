@@ -124,10 +124,10 @@ func runDedup(inputFile, outputFile string, seenVanity map[[32]byte]bool) {
 
 func runSHA256(outputFile string) {
 	f, err := os.Open(outputFile)
-	defer f.Close()
 	if err != nil {
 		log.Fatalf("Error opening file: %v", err)
 	}
+	defer f.Close()
 
 	h := sha256.New()
 	if _, err = io.Copy(h, f); err != nil {
@@ -166,7 +166,7 @@ func (h *headerReader) read(callback func(header *types.Header)) {
 			if err == io.EOF {
 				break
 			}
-			log.Fatalf("Error reading headerSizeBytes: %v", err)
+			log.Printf("Error reading headerSizeBytes: %v\n", err)
 		}
 		headerSize := binary.BigEndian.Uint16(headerSizeBytes)
 
@@ -176,7 +176,7 @@ func (h *headerReader) read(callback func(header *types.Header)) {
 			if err == io.EOF {
 				break
 			}
-			log.Fatalf("Error reading headerBytes: %v", err)
+			log.Printf("Error reading headerBytes: %v\n", err)
 		}
 		header := new(types.Header).FromBytes(headerBytes)
 

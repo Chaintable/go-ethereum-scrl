@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"math/rand"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,13 +26,21 @@ var fetchCmd = &cobra.Command{
 	Long: `Fetch allows to retrieve the missing block header fields from a running Scroll L2 node via RPC.
 It produces a binary file and optionally a human readable csv file with the missing fields.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		rpc, err := cmd.Flags().GetString("rpc")
+		rpcs, err := cmd.Flags().GetString("rpc")
 		if err != nil {
 			log.Fatalf("Error reading rpc flag: %v", err)
 		}
-		client, err := ethclient.Dial(rpc)
-		if err != nil {
-			log.Fatalf("Error connecting to RPC: %v", err)
+		rpcNodes := strings.Split(rpcs, ",")
+		if len(rpcNodes) == 0 {
+			log.Fatal("No RPC URLs provided, please use the --rpcs flag to specify at least one RPC URL.")
+		}
+		var clients []*ethclient.Client
+		for _, rpc := range rpcNodes {
+			client, err := ethclient.Dial(rpc)
+			if err != nil {
+				log.Fatalf("Error connecting to RPC: %v", err)
+			}
+			clients = append(clients, client)
 		}
 		startBlockNum, err := cmd.Flags().GetUint64("start")
 		if err != nil {
@@ -56,21 +66,43 @@ It produces a binary file and optionally a human readable csv file with the miss
 		if err != nil {
 			log.Fatalf("Error reading humanReadable flag: %v", err)
 		}
+		continueFile, err := cmd.Flags().GetString("continue")
+		if err != nil {
+			log.Fatalf("Error reading continue flag: %v", err)
+		}
 
-		runFetch(client, startBlockNum, endBlockNum, batchSize, maxParallelGoroutines, outputFile, humanReadableOutputFile)
+		if continueFile != "" {
+			fmt.Println("Continue fetching block header fields from", continueFile)
+
+			reader := newHeaderReader(continueFile)
+			defer reader.close()
+
+			var lastSeenHeader uint64
+			reader.read(func(header *types.Header) {
+				lastSeenHeader = header.Number
+			})
+			fmt.Println("Last Seen Header:", lastSeenHeader)
+
+			startBlockNum = lastSeenHeader + 1
+
+			fmt.Println("Overriding start block number to:", startBlockNum)
+		}
+
+		runFetch(clients, startBlockNum, endBlockNum, batchSize, maxParallelGoroutines, outputFile, humanReadableOutputFile, continueFile)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(fetchCmd)
 
-	fetchCmd.Flags().String("rpc", "http://localhost:8545", "RPC URL")
+	fetchCmd.Flags().String("rpc", "http://localhost:8545,http://localhost:8546", "RPC URLs, separated by commas. Example: http://localhost:8545,http://localhost:8546")
 	fetchCmd.Flags().Uint64("start", 0, "start block number")
 	fetchCmd.Flags().Uint64("end", 1000, "end block number")
 	fetchCmd.Flags().Uint64("batch", 100, "batch size")
 	fetchCmd.Flags().Int("parallelism", 10, "max parallel goroutines each working on batch size blocks")
 	fetchCmd.Flags().String("output", "headers.bin", "output file")
 	fetchCmd.Flags().String("humanOutput", "", "additionally produce human readable csv file")
+	fetchCmd.Flags().String("continue", "", "continue fetching block header fields from the last seen block number in the specified continue file")
 }
 
 func headerByNumberWithRetry(client *ethclient.Client, blockNum uint64, maxRetries int) (*types.Header, error) {
@@ -95,20 +127,52 @@ func headerByNumberWithRetry(client *ethclient.Client, blockNum uint64, maxRetri
 	return nil, fmt.Errorf("error fetching header for block %d: %v", blockNum, innerErr)
 }
 
-func fetchHeaders(client *ethclient.Client, start, end uint64, headersChan chan<- *types.Header) {
+func fetchHeaders(clients []*ethclient.Client, start, end uint64, headersChan chan<- *types.Header) {
+	// randomize client selection to distribute load
+	r := uint64(rand.Int())
+
+	// log time taken for fetching headers
+	startTime := time.Now()
+	var fetchTimeAvg, writeTimeAvg time.Duration
+
 	for i := start; i <= end; i++ {
+		startTimeBlockFetch := time.Now()
+		client := clients[(r+i)%uint64(len(clients))] // round-robin client selection
 		header, err := headerByNumberWithRetry(client, i, 15)
 		if err != nil {
 			log.Fatalf("Error fetching header %d: %v", i, err)
 		}
+		fetchTimeAvg += time.Since(startTimeBlockFetch)
 
+		startTimeHeaderWrite := time.Now()
 		headersChan <- header
+		writeTimeAvg += time.Since(startTimeHeaderWrite)
 	}
+	totalDuration := time.Since(startTime)
+
+	fetchTimeAvg = fetchTimeAvg / time.Duration(end-start+1)
+	writeTimeAvg = writeTimeAvg / time.Duration(end-start+1)
+	log.Printf("Fetched %d header in %s (avg=%s, wrote to channel in avg %s", end-start+1, totalDuration, fetchTimeAvg, writeTimeAvg)
 }
 
-func writeHeadersToFile(outputFile string, humanReadableOutputFile string, startBlockNum uint64, headersChan <-chan *types.Header) {
+func writeHeadersToFile(outputFile string, humanReadableOutputFile string, continueFile string, startBlockNum uint64, headersChan <-chan *types.Header) {
 	writer := newFilesWriter(outputFile, humanReadableOutputFile)
 	defer writer.close()
+
+	if continueFile != "" {
+		reader := newHeaderReader(continueFile)
+
+		var lastSeenHeader uint64
+		var totalHeaders uint64
+		reader.read(func(header *types.Header) {
+			writer.write(header)
+			totalHeaders++
+			lastSeenHeader = header.Number
+		})
+
+		fmt.Println("Copied ", totalHeaders, "headers from continue file, last seen block number:", lastSeenHeader)
+		reader.close()
+	}
 
 	headerHeap := &types.HeaderHeap{}
 	heap.Init(headerHeap)
@@ -130,15 +194,15 @@ func writeHeadersToFile(outputFile string, humanReadableOutputFile string, start
 	fmt.Println("Finished writing headers to file, last block number:", nextHeaderNum-1)
 }
 
-func runFetch(client *ethclient.Client, startBlockNum uint64, endBlockNum uint64, batchSize uint64, maxGoroutines int, outputFile string, humanReadableOutputFile string) {
+func runFetch(clients []*ethclient.Client, startBlockNum uint64, endBlockNum uint64, batchSize uint64, maxGoroutines int, outputFile string, humanReadableOutputFile string, continueFile string) {
 	headersChan := make(chan *types.Header, maxGoroutines*int(batchSize))
 	tasks := make(chan task, maxGoroutines)
 
 	var wgConsumer sync.WaitGroup
 	// start consumer goroutine to sort and write headers to file
+	wgConsumer.Add(1)
 	go func() {
-		wgConsumer.Add(1)
-		writeHeadersToFile(outputFile, humanReadableOutputFile, startBlockNum, headersChan)
+		writeHeadersToFile(outputFile, humanReadableOutputFile, continueFile, startBlockNum, headersChan)
 		wgConsumer.Done()
 	}()
 
@@ -152,7 +216,8 @@ func runFetch(client *ethclient.Client, startBlockNum uint64, endBlockNum uint64
 				if !ok {
 					break
 				}
-				fetchHeaders(client, t.start, t.end, headersChan)
+				log.Println("Received task", t.start, "to", t.end)
+				fetchHeaders(clients, t.start, t.end, headersChan)
 			}
 			wgProducers.Done()
 		}()
@@ -164,7 +229,7 @@ func runFetch(client *ethclient.Client, startBlockNum uint64, endBlockNum uint64
 		if end > endBlockNum {
 			end = endBlockNum
 		}
-		fmt.Println("Fetching headers for blocks", start, "to", end)
+		fmt.Println("Created task for blocks", start, "to", end)
 
 		tasks <- task{start, end}
 	}

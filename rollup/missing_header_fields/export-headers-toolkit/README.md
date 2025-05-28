@@ -1,13 +1,13 @@
 # Export missing block header fields toolkit
 
-A toolkit for exporting and transforming missing block header fields of Scroll before {{upgrade_name}} TODO: replace when upgrade is clear.
+A toolkit for exporting and transforming missing block header fields of Scroll before EuclidV2 upgrade.
 
 ## Context
 We are using the [Clique consensus](https://eips.ethereum.org/EIPS/eip-225) in Scroll L2. Amongst others, it requires the following header fields:
 - `extraData`
 - `difficulty`
 
-However, before {{upgrade_name}}, these fields were not stored on L1/DA.
+However, before EuclidV2, these fields were not stored on L1/DA.
 In order for nodes to be able to reconstruct the correct block hashes when only reading data from L1, 
 we need to provide the historical values of these fields to these nodes through a separate file.
 
