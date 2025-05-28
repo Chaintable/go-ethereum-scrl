@@ -86,6 +86,12 @@ func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
 
 	bits := newBitMaskFromByte(bitmaskByte)
 
+	// read the vanity index
+	vanityIndex, err := r.reader.ReadByte()
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to read vanity index: %v", err)
+	}
+
 	seal := make([]byte, bits.sealLen())
 
 	if _, err = io.ReadFull(r.reader, seal); err != nil {
@@ -93,7 +99,7 @@ func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
 	}
 
 	// construct the extraData field
-	vanity := r.sortedVanities[bits.vanityIndex()]
+	vanity := r.sortedVanities[int(vanityIndex)]
 	var b bytes.Buffer
 	b.Write(vanity[:])
 	b.Write(seal)

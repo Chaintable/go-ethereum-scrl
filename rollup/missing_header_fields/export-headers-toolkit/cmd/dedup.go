@@ -293,4 +293,6 @@ func verifyOutputFile(verifyFile, outputFile string) {
 			log.Fatalf("ExtraData mismatch: headerNum %d: %x != %x", header.Number, header.ExtraData, extraData)
 		}
 	}
+
+	log.Printf("All headers match in %s and %s\n", verifyFile, outputFile)
 }

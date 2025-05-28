@@ -29,9 +29,8 @@ Where:
 - unique_vanity_i: unique vanity i
 - header_i: block header i
 - header: 
-    <flags:uint8><seal:[65|85]byte>
+    <flags:uint8><vanity_index:uint8><seal:[65|85]byte>
     - flags: bitmask, lsb first
-	    - bit 0-5: index of the vanity in the sorted vanities list
 	    - bit 6: 0 if difficulty is 2, 1 if difficulty is 1
 	    - bit 7: 0 if seal length is 65, 1 if seal length is 85
 ```

@@ -5,14 +5,15 @@ import (
 	"bytes"
 	"io"
 	"log"
+	"math"
 	"os"
 	"sort"
 
 	"github.com/scroll-tech/go-ethereum/export-headers-toolkit/types"
 )
 
-// maxVanityCount is the maximum number of unique vanities that can be represented with 6 bits in the bitmask
-const maxVanityCount = 1 << 6
+// maxVanityCount is the maximum number of unique vanities that can be represented with a single byte.
+const maxVanityCount = math.MaxUint8
 
 type missingHeaderFileWriter struct {
 	file   *os.File
@@ -94,13 +95,20 @@ func (m *missingHeaderWriter) writeVanities() {
 
 func (m *missingHeaderWriter) write(header *types.Header) {
 	// 1. prepare the bitmask
-	bits := newBitMask(m.sortedVanitiesMap[header.Vanity()], int(header.Difficulty), header.SealLen())
+	bits := newBitMask(int(header.Difficulty), header.SealLen())
+	vanityIndex := m.sortedVanitiesMap[header.Vanity()]
 
-	// 2. write the header: bitmask and seal
+	if vanityIndex >= maxVanityCount {
+		log.Fatalf("Vanity index %d exceeds maximum allowed %d", vanityIndex, maxVanityCount-1)
+	}
+
+	// 2. write the header: bitmask, vanity index and seal
 	if _, err := m.writer.Write(bits.Bytes()); err != nil {
 		log.Fatalf("Error writing bitmask: %v", err)
 	}
-
+	if _, err := m.writer.Write([]byte{uint8(vanityIndex)}); err != nil {
+		log.Fatalf("Error writing vanity index: %v", err)
+	}
 	if _, err := m.writer.Write(header.Seal()); err != nil {
 		log.Fatalf("Error writing seal: %v", err)
 	}
@@ -108,7 +116,6 @@ func (m *missingHeaderWriter) write(header *types.Header) {
 
 // bitMask is a bitmask that encodes the following information:
 //
-//	bit 0-5: index of the vanity in the sorted vanities list
 //	bit 6: 0 if difficulty is 2, 1 if difficulty is 1
 //	bit 7: 0 if seal length is 65, 1 if seal length is 85
 type bitMask struct {
@@ -119,13 +126,8 @@ func newBitMaskFromByte(b uint8) bitMask {
 	return bitMask{b}
 }
 
-func newBitMask(vanityIndex int, difficulty int, sealLen int) bitMask {
+func newBitMask(difficulty int, sealLen int) bitMask {
 	b := uint8(0)
-
-	if vanityIndex >= maxVanityCount {
-		log.Fatalf("Vanity index exceeds maximum: %d >= %d", vanityIndex, maxVanityCount)
-	}
-	b |= uint8(vanityIndex) & 0b00111111
 
 	if difficulty == 1 {
 		b |= 1 << 6
@@ -140,10 +142,6 @@ func newBitMask(vanityIndex int, difficulty int, sealLen int) bitMask {
 	}
 
 	return bitMask{b}
-}
-
-func (b bitMask) vanityIndex() int {
-	return int(b.b & 0b00111111)
 }
 
 func (b bitMask) difficulty() int {
