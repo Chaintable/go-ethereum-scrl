@@ -4,8 +4,8 @@ go 1.22
 
 require (
 	github.com/scroll-tech/go-ethereum v1.10.14-0.20240624092647-7da0bd5480e9
-	github.com/spf13/cobra v1.8.1
-	github.com/stretchr/testify v1.9.0
+	github.com/spf13/cobra v1.9.1
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
@@ -51,7 +51,7 @@ require (
 	github.com/scroll-tech/da-codec v0.0.0-20240605080813-32bfc9fccde7 // indirect
 	github.com/scroll-tech/zktrie v0.8.4 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4 // indirect
 	github.com/supranational/blst v0.3.12 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect

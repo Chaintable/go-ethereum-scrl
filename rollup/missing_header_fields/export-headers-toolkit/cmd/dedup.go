@@ -223,7 +223,10 @@ func (h *csvHeaderReader) readNext() *types.Header {
 		log.Fatalf("Error reading line: %v", err)
 	}
 
-	s := strings.Split(line, ",")
+	s := strings.Split(strings.TrimSpace(line), ",")
+	if len(s) < 3 {
+		log.Fatalf("Malformed CSV line: %q", line)
+	}
 	extraString := strings.Split(s[2], "\n")
 
 	num, err := strconv.ParseUint(s[0], 10, 64)

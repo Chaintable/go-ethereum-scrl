@@ -31,8 +31,10 @@ Where:
 - header: 
     <flags:uint8><vanity_index:uint8><seal:[65|85]byte>
     - flags: bitmask, lsb first
-	    - bit 6: 0 if difficulty is 2, 1 if difficulty is 1
-	    - bit 7: 0 if seal length is 65, 1 if seal length is 85
+        - bit 6: 0 if difficulty is 2, 1 if difficulty is 1
+        - bit 7: 0 if seal length is 65, 1 if seal length is 85
+    - vanity_index: index of the vanity in the sorted vanities list (0-255)
+    - seal: 65 or 85 bytes of seal data
 ```
 
 ## How to run

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/scroll-tech/go-ethereum/export-headers-toolkit/types"
 )
@@ -39,10 +40,11 @@ func TestMissingHeaderWriter(t *testing.T) {
 		header := types.NewHeader(0, 2, append(vanity1[:], seal...))
 		mhw.write(header)
 
-		// bit 0-5:0x0 index0, bit 6=0: difficulty 2, bit 7=0: seal length 65
+		// bit 6=0: difficulty 2, bit 7=0: seal length 65
 		expectedBytes = append(expectedBytes, 0b00000000)
+		expectedBytes = append(expectedBytes, 0x00) // vanity index0
 		expectedBytes = append(expectedBytes, seal...)
-		assert.Equal(t, expectedBytes, bytesBuffer.Bytes())
+		require.Equal(t, expectedBytes, bytesBuffer.Bytes())
 	}
 
 	// Header1
@@ -51,10 +53,11 @@ func TestMissingHeaderWriter(t *testing.T) {
 		header := types.NewHeader(1, 1, append(vanity2[:], seal...))
 		mhw.write(header)
 
-		// bit 0-5:0x1 index1, bit 6=1: difficulty 1, bit 7=0: seal length 65
-		expectedBytes = append(expectedBytes, 0b01000001)
+		// bit 6=1: difficulty 1, bit 7=0: seal length 65
+		expectedBytes = append(expectedBytes, 0b01000000)
+		expectedBytes = append(expectedBytes, 0x01) // vanity index1
 		expectedBytes = append(expectedBytes, seal...)
-		assert.Equal(t, expectedBytes, bytesBuffer.Bytes())
+		require.Equal(t, expectedBytes, bytesBuffer.Bytes())
 	}
 
 	// Header2
@@ -63,10 +66,11 @@ func TestMissingHeaderWriter(t *testing.T) {
 		header := types.NewHeader(2, 2, append(vanity2[:], seal...))
 		mhw.write(header)
 
-		// bit 0-5:0x1 index1, bit 6=0: difficulty 2, bit 7=1: seal length 85
-		expectedBytes = append(expectedBytes, 0b10000001)
+		// bit 6=0: difficulty 2, bit 7=1: seal length 85
+		expectedBytes = append(expectedBytes, 0b10000000)
+		expectedBytes = append(expectedBytes, 0x01) // vanity index1
 		expectedBytes = append(expectedBytes, seal...)
-		assert.Equal(t, expectedBytes, bytesBuffer.Bytes())
+		require.Equal(t, expectedBytes, bytesBuffer.Bytes())
 	}
 
 	// Header3
@@ -75,10 +79,11 @@ func TestMissingHeaderWriter(t *testing.T) {
 		header := types.NewHeader(3, 1, append(vanity8[:], seal...))
 		mhw.write(header)
 
-		// bit 0-5:0x2 index2, bit 6=1: difficulty 1, bit 7=1: seal length 85
-		expectedBytes = append(expectedBytes, 0b11000010)
+		// bit 6=1: difficulty 1, bit 7=1: seal length 85
+		expectedBytes = append(expectedBytes, 0b11000000)
+		expectedBytes = append(expectedBytes, 0x02) // vanity index2
 		expectedBytes = append(expectedBytes, seal...)
-		assert.Equal(t, expectedBytes, bytesBuffer.Bytes())
+		require.Equal(t, expectedBytes, bytesBuffer.Bytes())
 	}
 
 	// Header4
@@ -87,10 +92,11 @@ func TestMissingHeaderWriter(t *testing.T) {
 		header := types.NewHeader(4, 2, append(vanity1[:], seal...))
 		mhw.write(header)
 
-		// bit 0-5:0x0 index0, bit 6=0: difficulty 2, bit 7=0: seal length 65
+		// bit 6=0: difficulty 2, bit 7=0: seal length 65
 		expectedBytes = append(expectedBytes, 0b00000000)
+		expectedBytes = append(expectedBytes, 0x00) // vanity index0
 		expectedBytes = append(expectedBytes, seal...)
-		assert.Equal(t, expectedBytes, bytesBuffer.Bytes())
+		require.Equal(t, expectedBytes, bytesBuffer.Bytes())
 	}
 }
 

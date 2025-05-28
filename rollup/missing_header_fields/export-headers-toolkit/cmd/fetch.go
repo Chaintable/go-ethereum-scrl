@@ -30,10 +30,10 @@ It produces a binary file and optionally a human readable csv file with the miss
 		if err != nil {
 			log.Fatalf("Error reading rpc flag: %v", err)
 		}
-		rpcNodes := strings.Split(rpcs, ",")
-		if len(rpcNodes) == 0 {
-			log.Fatal("No RPC URLs provided, please use the --rpcs flag to specify at least one RPC URL.")
+		if rpcs == "" {
+			log.Fatal("No RPC URLs provided, please use the --rpc flag to specify at least one RPC URL.")
 		}
+		rpcNodes := strings.Split(rpcs, ",")
 		var clients []*ethclient.Client
 		for _, rpc := range rpcNodes {
 			client, err := ethclient.Dial(rpc)
@@ -86,6 +86,10 @@ It produces a binary file and optionally a human readable csv file with the miss
 			startBlockNum = lastSeenHeader + 1
 
 			fmt.Println("Overriding start block number to:", startBlockNum)
+
+			if startBlockNum > endBlockNum {
+				log.Fatalf("Start block number %d exceeds end block number %d after continuing from file", startBlockNum, endBlockNum)
+			}
 		}
 
 		runFetch(clients, startBlockNum, endBlockNum, batchSize, maxParallelGoroutines, outputFile, humanReadableOutputFile, continueFile)
