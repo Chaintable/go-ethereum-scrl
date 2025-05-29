@@ -54,6 +54,7 @@ type PartialHeader struct {
 	GasLimit   uint64
 	Difficulty uint64
 	ExtraData  []byte
+	StateRoot  common.Hash
 }
 
 func (h *PartialHeader) ToHeader() *types.Header {
@@ -64,6 +65,7 @@ func (h *PartialHeader) ToHeader() *types.Header {
 		GasLimit:   h.GasLimit,
 		Difficulty: new(big.Int).SetUint64(h.Difficulty),
 		Extra:      h.ExtraData,
+		Root:       h.StateRoot,
 	}
 }
 

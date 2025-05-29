@@ -1903,7 +1903,11 @@ func (bc *BlockChain) BuildAndWriteBlock(parentBlock *types.Block, header *types
 
 	// finalize and assemble block as fullBlock: replicates consensus.FinalizeAndAssemble()
 	header.GasUsed = gasUsed
-	header.Root = statedb.IntermediateRoot(bc.chainConfig.IsEIP158(header.Number))
+
+	// state root might be set from partial header. If it is not set, we calculate it.
+	if header.Root == (common.Hash{}) {
+		header.Root = statedb.IntermediateRoot(bc.chainConfig.IsEIP158(header.Number))
+	}
 
 	fullBlock := types.NewBlock(header, txs, nil, receipts, trie.NewStackTrie(nil))
 

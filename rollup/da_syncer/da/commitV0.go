@@ -121,7 +121,7 @@ func (c *CommitBatchDAV0) Blocks(manager *missing_header_fields.Manager) ([]*Par
 
 	curL1TxIndex := c.parentTotalL1MessagePopped
 	for _, chunk := range c.chunks {
-		for blockId, daBlock := range chunk.Blocks {
+		for blockIndex, daBlock := range chunk.Blocks {
 			// create txs
 			txs := make(types.Transactions, 0, daBlock.NumTransactions())
 			// insert l1 msgs
@@ -133,11 +133,11 @@ func (c *CommitBatchDAV0) Blocks(manager *missing_header_fields.Manager) ([]*Par
 			curL1TxIndex += uint64(daBlock.NumL1Messages())
 
 			// insert l2 txs
-			txs = append(txs, chunk.Transactions[blockId]...)
+			txs = append(txs, chunk.Transactions[blockIndex]...)
 
-			difficulty, extraData, err := manager.GetMissingHeaderFields(daBlock.Number())
+			difficulty, stateRoot, extraData, err := manager.GetMissingHeaderFields(daBlock.Number())
 			if err != nil {
-				return nil, fmt.Errorf("failed to get missing header fields for block %d: %w", blockId, err)
+				return nil, fmt.Errorf("failed to get missing header fields for block %d: %w", daBlock.Number(), err)
 			}
 
 			block := NewPartialBlock(
@@ -148,6 +148,7 @@ func (c *CommitBatchDAV0) Blocks(manager *missing_header_fields.Manager) ([]*Par
 					GasLimit:   daBlock.GasLimit(),
 					Difficulty: difficulty,
 					ExtraData:  extraData,
+					StateRoot:  stateRoot,
 				},
 				txs)
 			blocks = append(blocks, block)
