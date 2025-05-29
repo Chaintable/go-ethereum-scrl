@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/scroll-tech/go-ethereum/common"
 )
 
 type missingHeader struct {
 	headerNum  uint64
 	difficulty uint64
+	stateRoot  common.Hash
 	extraData  []byte
 }
 
@@ -35,7 +38,7 @@ func NewReader(filePath string) (*Reader, error) {
 	// read the count of unique vanities
 	vanityCount, err := r.reader.ReadByte()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read vanity count: %v", err)
+		return nil, err
 	}
 
 	// read the unique vanities
@@ -43,7 +46,7 @@ func NewReader(filePath string) (*Reader, error) {
 	for i := uint8(0); i < vanityCount; i++ {
 		var vanity [32]byte
 		if _, err = r.reader.Read(vanity[:]); err != nil {
-			return nil, fmt.Errorf("failed to read vanity: %v", err)
+			return nil, err
 		}
 		r.sortedVanities[int(i)] = vanity
 	}
@@ -51,10 +54,10 @@ func NewReader(filePath string) (*Reader, error) {
 	return r, nil
 }
 
-func (r *Reader) Read(headerNum uint64) (difficulty uint64, extraData []byte, err error) {
+func (r *Reader) Read(headerNum uint64) (difficulty uint64, stateRoot common.Hash, extraData []byte, err error) {
 	if r.lastReadHeader == nil {
 		if _, _, err = r.ReadNext(); err != nil {
-			return 0, nil, err
+			return 0, common.Hash{}, nil, err
 		}
 	}
 
@@ -62,17 +65,17 @@ func (r *Reader) Read(headerNum uint64) (difficulty uint64, extraData []byte, er
 		// skip the headers until the requested header number
 		for i := r.lastReadHeader.headerNum; i < headerNum; i++ {
 			if _, _, err = r.ReadNext(); err != nil {
-				return 0, nil, err
+				return 0, common.Hash{}, nil, err
 			}
 		}
 	}
 
 	if headerNum == r.lastReadHeader.headerNum {
-		return r.lastReadHeader.difficulty, r.lastReadHeader.extraData, nil
+		return r.lastReadHeader.difficulty, r.lastReadHeader.stateRoot, r.lastReadHeader.extraData, nil
 	}
 
 	// headerNum < r.lastReadHeader.headerNum is not supported
-	return 0, nil, fmt.Errorf("requested header %d below last read header number %d", headerNum, r.lastReadHeader.headerNum)
+	return 0, common.Hash{}, nil, fmt.Errorf("requested header %d below last read header number %d", headerNum, r.lastReadHeader.headerNum)
 }
 
 func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
@@ -82,12 +85,17 @@ func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
 		return 0, nil, fmt.Errorf("failed to read bitmask: %v", err)
 	}
 
-	bits := newBitMask(bitmaskByte)
+	bits := newBitMaskFromBytes(bitmaskByte)
 
 	// read the vanity index
 	vanityIndex, err := r.reader.ReadByte()
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to read vanity index: %v", err)
+	}
+
+	stateRoot := make([]byte, common.HashLength)
+	if _, err := io.ReadFull(r.reader, stateRoot); err != nil {
+		return 0, nil, fmt.Errorf("failed to read state root: %v", err)
 	}
 
 	seal := make([]byte, bits.sealLen())
@@ -107,11 +115,13 @@ func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
 		r.lastReadHeader = &missingHeader{
 			headerNum:  0,
 			difficulty: uint64(bits.difficulty()),
+			stateRoot:  common.BytesToHash(stateRoot),
 			extraData:  b.Bytes(),
 		}
 	} else {
 		r.lastReadHeader.headerNum++
 		r.lastReadHeader.difficulty = uint64(bits.difficulty())
+		r.lastReadHeader.stateRoot = common.BytesToHash(stateRoot)
 		r.lastReadHeader.extraData = b.Bytes()
 	}
 
@@ -130,7 +140,7 @@ type bitMask struct {
 	b uint8
 }
 
-func newBitMask(b uint8) bitMask {
+func newBitMaskFromBytes(b uint8) bitMask {
 	return bitMask{b}
 }
 

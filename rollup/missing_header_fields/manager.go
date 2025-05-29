@@ -37,11 +37,11 @@ func NewManager(ctx context.Context, filePath string, downloadURL string, expect
 	}
 }
 
-func (m *Manager) GetMissingHeaderFields(headerNum uint64) (difficulty uint64, extraData []byte, err error) {
+func (m *Manager) GetMissingHeaderFields(headerNum uint64) (difficulty uint64, stateRoot common.Hash, extraData []byte, err error) {
 	// lazy initialization: if the reader is not initialized this is the first time we read from the file
 	if m.reader == nil {
 		if err = m.initialize(); err != nil {
-			return 0, nil, fmt.Errorf("failed to initialize missing header reader: %v", err)
+			return 0, common.Hash{}, nil, fmt.Errorf("failed to initialize missing header reader: %v", err)
 		}
 	}
 
