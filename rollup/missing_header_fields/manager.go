@@ -11,10 +11,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/log"
 )
 
-const timeoutDownload = 10 * time.Minute
+const timeoutDownload = 30 * time.Minute
 
 // Manager is responsible for managing the missing header fields file.
 // It lazily downloads the file if it doesn't exist, verifies its expectedChecksum and provides the missing header fields.
@@ -22,12 +23,12 @@ type Manager struct {
 	ctx              context.Context
 	filePath         string
 	downloadURL      string
-	expectedChecksum [sha256.Size]byte
+	expectedChecksum common.Hash
 
 	reader *Reader
 }
 
-func NewManager(ctx context.Context, filePath string, downloadURL string, expectedChecksum [sha256.Size]byte) *Manager {
+func NewManager(ctx context.Context, filePath string, downloadURL string, expectedChecksum common.Hash) *Manager {
 	return &Manager{
 		ctx:              ctx,
 		filePath:         filePath,
