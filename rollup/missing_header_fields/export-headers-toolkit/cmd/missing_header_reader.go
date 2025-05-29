@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/scroll-tech/go-ethereum/common"
 )
 
 // TODO: instead of duplicating this file, missing_header_fields.Reader should be used in toolkit
@@ -13,6 +15,7 @@ import (
 type missingHeader struct {
 	headerNum  uint64
 	difficulty uint64
+	stateRoot  common.Hash
 	extraData  []byte
 }
 
@@ -53,10 +56,10 @@ func NewReader(filePath string) (*Reader, error) {
 	return r, nil
 }
 
-func (r *Reader) Read(headerNum uint64) (difficulty uint64, extraData []byte, err error) {
+func (r *Reader) Read(headerNum uint64) (difficulty uint64, stateRoot common.Hash, extraData []byte, err error) {
 	if r.lastReadHeader == nil {
 		if _, _, err = r.ReadNext(); err != nil {
-			return 0, nil, err
+			return 0, common.Hash{}, nil, err
 		}
 	}
 
@@ -64,17 +67,17 @@ func (r *Reader) Read(headerNum uint64) (difficulty uint64, extraData []byte, er
 		// skip the headers until the requested header number
 		for i := r.lastReadHeader.headerNum; i < headerNum; i++ {
 			if _, _, err = r.ReadNext(); err != nil {
-				return 0, nil, err
+				return 0, common.Hash{}, nil, err
 			}
 		}
 	}
 
 	if headerNum == r.lastReadHeader.headerNum {
-		return r.lastReadHeader.difficulty, r.lastReadHeader.extraData, nil
+		return r.lastReadHeader.difficulty, r.lastReadHeader.stateRoot, r.lastReadHeader.extraData, nil
 	}
 
 	// headerNum < r.lastReadHeader.headerNum is not supported
-	return 0, nil, fmt.Errorf("requested header %d below last read header number %d", headerNum, r.lastReadHeader.headerNum)
+	return 0, common.Hash{}, nil, fmt.Errorf("requested header %d below last read header number %d", headerNum, r.lastReadHeader.headerNum)
 }
 
 func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
@@ -90,6 +93,11 @@ func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
 	vanityIndex, err := r.reader.ReadByte()
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to read vanity index: %v", err)
+	}
+
+	var stateRoot common.Hash
+	if _, err := io.ReadFull(r.reader, stateRoot[:]); err != nil {
+		return 0, nil, fmt.Errorf("failed to read state root: %v", err)
 	}
 
 	seal := make([]byte, bits.sealLen())
@@ -110,11 +118,13 @@ func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
 		r.lastReadHeader = &missingHeader{
 			headerNum:  0,
 			difficulty: uint64(bits.difficulty()),
+			stateRoot:  stateRoot,
 			extraData:  b.Bytes(),
 		}
 	} else {
 		r.lastReadHeader.headerNum++
 		r.lastReadHeader.difficulty = uint64(bits.difficulty())
+		r.lastReadHeader.stateRoot = stateRoot
 		r.lastReadHeader.extraData = b.Bytes()
 	}
 
