@@ -1880,14 +1880,16 @@ func (bc *BlockChain) BuildAndWriteBlock(parentBlock *types.Block, header *types
 
 	header.ParentHash = parentBlock.Hash()
 
+	// sanitize base fee
+	if header.BaseFee != nil && header.BaseFee.Cmp(common.Big0) == 0 {
+		header.BaseFee = nil
+	}
+
 	tempBlock := types.NewBlockWithHeader(header).WithBody(txs, nil)
 	receipts, logs, gasUsed, err := bc.processor.Process(tempBlock, statedb, bc.vmConfig)
 	if err != nil {
 		return nil, NonStatTy, fmt.Errorf("error processing block: %w", err)
 	}
-
-	// TODO: once we have the extra and difficulty we need to verify the signature of the block with Clique
-	//  This should be done with https://github.com/scroll-tech/go-ethereum/pull/913.
 
 	if sign {
 		// Prevent Engine from overriding timestamp.
