@@ -9,7 +9,9 @@ We are using the [Clique consensus](https://eips.ethereum.org/EIPS/eip-225) in S
 
 However, before EuclidV2, these fields were not stored on L1/DA.
 In order for nodes to be able to reconstruct the correct block hashes when only reading data from L1, 
-we need to provide the historical values of these fields to these nodes through a separate file.
+we need to provide the historical values of these fields to these nodes through a separate file. 
+Additionally, the `stateRoot` field is included in the file to ensure that the block headers can be reconstructed correctly,
+independently of the state trie type used in the node (before EuclidV1 the state trie was ZK trie, after EuclidV1 it is a regular Merkle Patricia Trie).
 
 This toolkit provides commands to export the missing fields, deduplicate the data and create a file 
 with the missing fields that can be used to reconstruct the correct block hashes when only reading data from L1.
@@ -29,11 +31,12 @@ Where:
 - unique_vanity_i: unique vanity i
 - header_i: block header i
 - header: 
-    <flags:uint8><vanity_index:uint8><seal:[65|85]byte>
+    <flags:uint8><vanity_index:uint8><state_root:[32]byte><seal:[65|85]byte>
     - flags: bitmask, lsb first
         - bit 6: 0 if difficulty is 2, 1 if difficulty is 1
         - bit 7: 0 if seal length is 65, 1 if seal length is 85
     - vanity_index: index of the vanity in the sorted vanities list (0-255)
+    - state_root: 32 bytes of state root data
     - seal: 65 or 85 bytes of seal data
 ```
 

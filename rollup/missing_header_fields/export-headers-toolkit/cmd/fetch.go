@@ -114,11 +114,12 @@ func headerByNumberWithRetry(client *ethclient.Client, blockNum uint64, maxRetri
 	for i := 0; i < maxRetries; i++ {
 		header, err := client.HeaderByNumber(context.Background(), big.NewInt(int64(blockNum)))
 		if err == nil {
-			return &types.Header{
-				Number:     header.Number.Uint64(),
-				Difficulty: header.Difficulty.Uint64(),
-				ExtraData:  header.Extra,
-			}, nil
+			return types.NewHeader(
+				header.Number.Uint64(),
+				header.Difficulty.Uint64(),
+				header.Root,
+				header.Extra,
+			), nil
 		}
 
 		innerErr = err // save the last error to return it if all retries fail

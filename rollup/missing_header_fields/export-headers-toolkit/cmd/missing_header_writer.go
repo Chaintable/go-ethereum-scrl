@@ -109,6 +109,9 @@ func (m *missingHeaderWriter) write(header *types.Header) {
 	if _, err := m.writer.Write([]byte{uint8(vanityIndex)}); err != nil {
 		log.Fatalf("Error writing vanity index: %v", err)
 	}
+	if _, err := m.writer.Write(header.StateRoot[:]); err != nil {
+		log.Fatalf("Error writing state root: %v", err)
+	}
 	if _, err := m.writer.Write(header.Seal()); err != nil {
 		log.Fatalf("Error writing seal: %v", err)
 	}

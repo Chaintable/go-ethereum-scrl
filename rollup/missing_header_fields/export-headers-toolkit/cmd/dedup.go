@@ -224,10 +224,9 @@ func (h *csvHeaderReader) readNext() *types.Header {
 	}
 
 	s := strings.Split(strings.TrimSpace(line), ",")
-	if len(s) < 3 {
+	if len(s) != 4 {
 		log.Fatalf("Malformed CSV line: %q", line)
 	}
-	extraString := strings.Split(s[2], "\n")
 
 	num, err := strconv.ParseUint(s[0], 10, 64)
 	if err != nil {
@@ -237,9 +236,12 @@ func (h *csvHeaderReader) readNext() *types.Header {
 	if err != nil {
 		log.Fatalf("Error parsing difficulty: %v", err)
 	}
-	extra := common.FromHex(extraString[0])
 
-	header := types.NewHeader(num, difficulty, extra)
+	stateRoot := common.HexToHash(s[2])
+
+	extra := common.FromHex(strings.Split(s[3], "\n")[0])
+
+	header := types.NewHeader(num, difficulty, stateRoot, extra)
 	return header
 }
 
@@ -284,13 +286,16 @@ func verifyOutputFile(verifyFile, outputFile string) {
 			break
 		}
 
-		difficulty, extraData, err := dedupReader.Read(header.Number)
+		difficulty, stateRoot, extraData, err := dedupReader.Read(header.Number)
 		if err != nil {
 			log.Fatalf("Error reading header: %v", err)
 		}
 
 		if header.Difficulty != difficulty {
 			log.Fatalf("Difficulty mismatch: headerNum %d: %d != %d", header.Number, header.Difficulty, difficulty)
+		}
+		if header.StateRoot != stateRoot {
+			log.Fatalf("StateRoot mismatch: headerNum %d: %s != %s", header.Number, header.StateRoot, stateRoot)
 		}
 		if !bytes.Equal(header.ExtraData, extraData) {
 			log.Fatalf("ExtraData mismatch: headerNum %d: %x != %x", header.Number, header.ExtraData, extraData)
