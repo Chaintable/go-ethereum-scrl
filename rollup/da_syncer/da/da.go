@@ -8,6 +8,7 @@ import (
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/core/types"
 	"github.com/scroll-tech/go-ethereum/rollup/l1"
+	"github.com/scroll-tech/go-ethereum/rollup/missing_header_fields"
 )
 
 type Type int
@@ -34,7 +35,7 @@ type Entry interface {
 
 type EntryWithBlocks interface {
 	Entry
-	Blocks() ([]*PartialBlock, error)
+	Blocks(manager *missing_header_fields.Manager) ([]*PartialBlock, error)
 	Version() encoding.CodecVersion
 	Chunks() []*encoding.DAChunkRawTx
 	BlobVersionedHashes() []common.Hash

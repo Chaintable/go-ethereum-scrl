@@ -13,6 +13,7 @@ import (
 	"github.com/scroll-tech/go-ethereum/log"
 	"github.com/scroll-tech/go-ethereum/rollup/da_syncer/serrors"
 	"github.com/scroll-tech/go-ethereum/rollup/l1"
+	"github.com/scroll-tech/go-ethereum/rollup/missing_header_fields"
 )
 
 type CommitBatchDAV0 struct {
@@ -109,7 +110,7 @@ func (c *CommitBatchDAV0) CompareTo(other Entry) int {
 	return 0
 }
 
-func (c *CommitBatchDAV0) Blocks() ([]*PartialBlock, error) {
+func (c *CommitBatchDAV0) Blocks(manager *missing_header_fields.Manager) ([]*PartialBlock, error) {
 	l1Txs, err := getL1Messages(c.db, c.parentTotalL1MessagePopped, c.skippedL1MessageBitmap, c.l1MessagesPopped)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get L1 messages for v0 batch %d: %w", c.batchIndex, err)
@@ -134,14 +135,19 @@ func (c *CommitBatchDAV0) Blocks() ([]*PartialBlock, error) {
 			// insert l2 txs
 			txs = append(txs, chunk.Transactions[blockId]...)
 
+			difficulty, extraData, err := manager.GetMissingHeaderFields(daBlock.Number())
+			if err != nil {
+				return nil, fmt.Errorf("failed to get missing header fields for block %d: %w", blockId, err)
+			}
+
 			block := NewPartialBlock(
 				&PartialHeader{
 					Number:     daBlock.Number(),
 					Time:       daBlock.Timestamp(),
 					BaseFee:    daBlock.BaseFee(),
 					GasLimit:   daBlock.GasLimit(),
-					Difficulty: 10,                             // TODO: replace with real difficulty
-					ExtraData:  []byte{1, 2, 3, 4, 5, 6, 7, 8}, // TODO: replace with real extra data
+					Difficulty: difficulty,
+					ExtraData:  extraData,
 				},
 				txs)
 			blocks = append(blocks, block)
