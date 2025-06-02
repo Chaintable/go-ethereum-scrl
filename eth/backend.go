@@ -243,13 +243,13 @@ func New(stack *node.Node, config *ethconfig.Config, l1Client l1.Client) (*Ether
 	// simply let them run simultaneously. If messages are missing in DA syncing, it will be handled by the syncing pipeline
 	// by waiting and retrying.
 	if config.EnableDASyncing {
-		missingHeaderFieldsManager, err := createMissingHeaderFieldsManager(stack, chainConfig)
-		if err != nil {
-			return nil, fmt.Errorf("cannot create missing header fields manager: %w", err)
-		}
-
 		// Do not start syncing pipeline if we are producing blocks for permissionless batches.
 		if !config.DA.ProduceBlocks {
+			missingHeaderFieldsManager, err := createMissingHeaderFieldsManager(stack, chainConfig)
+			if err != nil {
+				return nil, fmt.Errorf("cannot create missing header fields manager: %w", err)
+			}
+
 			eth.syncingPipeline, err = da_syncer.NewSyncingPipeline(context.Background(), eth.blockchain, chainConfig, eth.chainDb, l1Client, stack.Config().L1DeploymentBlock, config.DA, missingHeaderFieldsManager)
 			if err != nil {
 				return nil, fmt.Errorf("cannot initialize da syncer: %w", err)
@@ -264,7 +264,7 @@ func New(stack *node.Node, config *ethconfig.Config, l1Client l1.Client) (*Ether
 	if err != nil {
 		return nil, fmt.Errorf("cannot initialize L1 sync service: %w", err)
 	}
-	//eth.syncService.Start()
+	eth.syncService.Start()
 
 	if config.EnableRollupVerify {
 		// initialize and start rollup event sync service
@@ -351,14 +351,14 @@ func createMissingHeaderFieldsManager(stack *node.Node, chainConfig *params.Chai
 	if err != nil {
 		return nil, fmt.Errorf("invalid DAMissingHeaderFieldsBaseURL: %w", err)
 	}
-	downloadURL.Path = path.Join(downloadURL.Path, chainConfig.ChainID.String())
+	downloadURL.Path = path.Join(downloadURL.Path, chainConfig.ChainID.String()+".bin")
 
 	expectedSHA256Checksum := chainConfig.Scroll.MissingHeaderFieldsSHA256
 	if expectedSHA256Checksum == nil {
 		return nil, fmt.Errorf("missing expected SHA256 checksum for missing header fields file in chain config")
 	}
+
 	filePath := filepath.Join(stack.Config().DataDir, fmt.Sprintf("missing-header-fields-%s-%s", chainConfig.ChainID, expectedSHA256Checksum.Hex()))
-	fmt.Println(filePath)
 	return missing_header_fields.NewManager(context.Background(), filePath, downloadURL.String(), *expectedSHA256Checksum), nil
 }
 

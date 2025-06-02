@@ -900,8 +900,8 @@ var (
 	}
 	DAMissingHeaderFieldsBaseURLFlag = cli.StringFlag{
 		Name:  "da.missingheaderfields.baseurl",
-		Usage: "Base URL for fetching missing header fields",
-		Value: "https://missingheaderfields.scroll.io", // TODO: add actual base url
+		Usage: "Base URL for fetching missing header fields for pre-EuclidV2 blocks",
+		Value: "https://scroll-block-missing-metadata.s3.us-west-2.amazonaws.com/",
 	}
 
 	DABlobScanAPIEndpointFlag = cli.StringFlag{
