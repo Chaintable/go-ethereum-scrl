@@ -27,7 +27,7 @@ type Reader struct {
 func NewReader(filePath string) (*Reader, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %v", err)
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 
 	r := &Reader{
@@ -35,10 +35,28 @@ func NewReader(filePath string) (*Reader, error) {
 		reader: bufio.NewReader(f),
 	}
 
+	if err = r.initialize(); err != nil {
+		if err = f.Close(); err != nil {
+			return nil, fmt.Errorf("failed to close file after initialization error: %w", err)
+		}
+		return nil, fmt.Errorf("failed to initialize reader: %w", err)
+	}
+
+	return r, nil
+}
+
+func (r *Reader) initialize() error {
+	// reset the reader and last read header
+	if _, err := r.file.Seek(0, io.SeekStart); err != nil {
+		return fmt.Errorf("failed to seek to start: %w", err)
+	}
+	r.reader = bufio.NewReader(r.file)
+	r.lastReadHeader = nil
+
 	// read the count of unique vanities
 	vanityCount, err := r.reader.ReadByte()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// read the unique vanities
@@ -46,15 +64,21 @@ func NewReader(filePath string) (*Reader, error) {
 	for i := uint8(0); i < vanityCount; i++ {
 		var vanity [32]byte
 		if _, err = r.reader.Read(vanity[:]); err != nil {
-			return nil, err
+			return err
 		}
 		r.sortedVanities[int(i)] = vanity
 	}
 
-	return r, nil
+	return nil
 }
 
 func (r *Reader) Read(headerNum uint64) (difficulty uint64, stateRoot common.Hash, extraData []byte, err error) {
+	if r.lastReadHeader != nil && headerNum < r.lastReadHeader.headerNum {
+		if err = r.initialize(); err != nil {
+			return 0, common.Hash{}, nil, fmt.Errorf("failed to reinitialize reader due to requested header number being lower than last read header: %w", err)
+		}
+	}
+
 	if r.lastReadHeader == nil {
 		if _, _, err = r.ReadNext(); err != nil {
 			return 0, common.Hash{}, nil, err
@@ -74,8 +98,7 @@ func (r *Reader) Read(headerNum uint64) (difficulty uint64, stateRoot common.Has
 		return r.lastReadHeader.difficulty, r.lastReadHeader.stateRoot, r.lastReadHeader.extraData, nil
 	}
 
-	// headerNum < r.lastReadHeader.headerNum is not supported
-	return 0, common.Hash{}, nil, fmt.Errorf("requested header %d below last read header number %d", headerNum, r.lastReadHeader.headerNum)
+	return 0, common.Hash{}, nil, fmt.Errorf("error reading header number %d: last read header number is %d", headerNum, r.lastReadHeader.headerNum)
 }
 
 func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {

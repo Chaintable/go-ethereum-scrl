@@ -48,20 +48,14 @@ func TestReader_Read(t *testing.T) {
 	readAndAssertHeader(t, reader, expectedMissingHeaders1, 1)
 	readAndAssertHeader(t, reader, expectedMissingHeaders1, 6)
 
-	// we don't allow reading previous headers
-	_, _, _, err = reader.Read(5)
-	require.Error(t, err)
+	// reading previous headers resets the file reader
+	readAndAssertHeader(t, reader, expectedMissingHeaders1, 5)
 
 	readAndAssertHeader(t, reader, expectedMissingHeaders1, 8)
 	readAndAssertHeader(t, reader, expectedMissingHeaders1, 8)
 
-	// we don't allow reading previous headers
-	_, _, _, err = reader.Read(5)
-	require.Error(t, err)
-
-	// we don't allow reading previous headers
-	_, _, _, err = reader.Read(6)
-	require.Error(t, err)
+	// reading previous headers resets the file reader
+	readAndAssertHeader(t, reader, expectedMissingHeaders1, 6)
 
 	readAndAssertHeader(t, reader, expectedMissingHeaders1, 9)
 	readAndAssertHeader(t, reader, expectedMissingHeaders1, 10)
