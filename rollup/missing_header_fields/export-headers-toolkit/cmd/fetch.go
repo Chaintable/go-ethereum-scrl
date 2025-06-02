@@ -201,7 +201,7 @@ func writeHeadersToFile(outputFile string, humanReadableOutputFile string, conti
 
 func runFetch(clients []*ethclient.Client, startBlockNum uint64, endBlockNum uint64, batchSize uint64, maxGoroutines int, outputFile string, humanReadableOutputFile string, continueFile string) {
 	headersChan := make(chan *types.Header, maxGoroutines*int(batchSize))
-	tasks := make(chan task, maxGoroutines)
+	tasks := make(chan task)
 
 	var wgConsumer sync.WaitGroup
 	// start consumer goroutine to sort and write headers to file
