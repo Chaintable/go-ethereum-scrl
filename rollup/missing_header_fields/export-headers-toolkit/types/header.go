@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -27,7 +28,7 @@ func NewHeader(number, difficulty uint64, stateRoot common.Hash, extraData []byt
 }
 
 func (h *Header) String() string {
-	return fmt.Sprintf("%d,%d,%s,%s\n", h.Number, h.Difficulty, h.StateRoot, common.Bytes2Hex(h.ExtraData))
+	return fmt.Sprintf("%d,%d,%s,%s\n", h.Number, h.Difficulty, h.StateRoot.Hex(), common.Bytes2Hex(h.ExtraData))
 }
 
 func (h *Header) Equal(other *Header) bool {
@@ -40,13 +41,8 @@ func (h *Header) Equal(other *Header) bool {
 	if h.StateRoot != other.StateRoot {
 		return false
 	}
-	if len(h.ExtraData) != len(other.ExtraData) {
+	if !bytes.Equal(h.ExtraData, other.ExtraData) {
 		return false
-	}
-	for i, b := range h.ExtraData {
-		if b != other.ExtraData[i] {
-			return false
-		}
 	}
 	return true
 }
