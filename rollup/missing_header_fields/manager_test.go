@@ -10,15 +10,15 @@ import (
 
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/log"
+	"github.com/scroll-tech/go-ethereum/params"
 )
 
 func TestManagerDownload(t *testing.T) {
 	t.Skip("skipping test due to long runtime/downloading file")
 	log.Root().SetHandler(log.StdoutHandler)
 
-	// TODO: replace with actual sha256 hash and downloadURL
-	sha256 := [32]byte(common.FromHex("0x250c097758924bc21d072e8dc57f4a2357ffaafb20e85eacea5c18dfe70e62b4"))
-	downloadURL := "https://ftp.halifax.rwth-aachen.de/ubuntu-releases/robots.txt"
+	sha256 := *params.ScrollSepoliaChainConfig.Scroll.MissingHeaderFieldsSHA256
+	downloadURL := "https://scroll-block-missing-metadata.s3.us-west-2.amazonaws.com/" + params.ScrollSepoliaChainConfig.ChainID.String() + ".bin"
 	filePath := filepath.Join(t.TempDir(), "test_file_path")
 	manager := NewManager(context.Background(), filePath, downloadURL, sha256)
 
@@ -53,8 +53,8 @@ func TestManagerChecksum(t *testing.T) {
 
 		difficulty, stateRoot, extra, err := manager.GetMissingHeaderFields(0)
 		require.NoError(t, err)
-		require.Equal(t, expectedMissingHeaders1[0].difficulty, difficulty)
-		require.Equal(t, expectedMissingHeaders1[0].stateRoot, stateRoot)
-		require.Equal(t, expectedMissingHeaders1[0].extra, extra)
+		require.Equal(t, expectedMissingHeaders[0].difficulty, difficulty)
+		require.Equal(t, expectedMissingHeaders[0].stateRoot, stateRoot)
+		require.Equal(t, expectedMissingHeaders[0].extra, extra)
 	}
 }

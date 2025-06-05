@@ -80,7 +80,7 @@ func (r *Reader) Read(headerNum uint64) (difficulty uint64, stateRoot common.Has
 	}
 
 	if r.lastReadHeader == nil {
-		if _, _, err = r.ReadNext(); err != nil {
+		if err = r.ReadNext(); err != nil {
 			return 0, common.Hash{}, nil, err
 		}
 	}
@@ -88,7 +88,7 @@ func (r *Reader) Read(headerNum uint64) (difficulty uint64, stateRoot common.Has
 	if headerNum > r.lastReadHeader.headerNum {
 		// skip the headers until the requested header number
 		for i := r.lastReadHeader.headerNum; i < headerNum; i++ {
-			if _, _, err = r.ReadNext(); err != nil {
+			if err = r.ReadNext(); err != nil {
 				return 0, common.Hash{}, nil, err
 			}
 		}
@@ -101,11 +101,11 @@ func (r *Reader) Read(headerNum uint64) (difficulty uint64, stateRoot common.Has
 	return 0, common.Hash{}, nil, fmt.Errorf("error reading header number %d: last read header number is %d", headerNum, r.lastReadHeader.headerNum)
 }
 
-func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
+func (r *Reader) ReadNext() (err error) {
 	// read the bitmask
 	bitmaskByte, err := r.reader.ReadByte()
 	if err != nil {
-		return 0, nil, fmt.Errorf("failed to read bitmask: %v", err)
+		return fmt.Errorf("failed to read bitmask: %v", err)
 	}
 
 	bits := newBitMaskFromBytes(bitmaskByte)
@@ -113,17 +113,17 @@ func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
 	// read the vanity index
 	vanityIndex, err := r.reader.ReadByte()
 	if err != nil {
-		return 0, nil, fmt.Errorf("failed to read vanity index: %v", err)
+		return fmt.Errorf("failed to read vanity index: %v", err)
 	}
 
 	stateRoot := make([]byte, common.HashLength)
 	if _, err := io.ReadFull(r.reader, stateRoot); err != nil {
-		return 0, nil, fmt.Errorf("failed to read state root: %v", err)
+		return fmt.Errorf("failed to read state root: %v", err)
 	}
 
 	seal := make([]byte, bits.sealLen())
 	if _, err = io.ReadFull(r.reader, seal); err != nil {
-		return 0, nil, fmt.Errorf("failed to read seal: %v", err)
+		return fmt.Errorf("failed to read seal: %v", err)
 	}
 
 	// construct the extraData field
@@ -148,7 +148,7 @@ func (r *Reader) ReadNext() (difficulty uint64, extraData []byte, err error) {
 		r.lastReadHeader.extraData = b.Bytes()
 	}
 
-	return difficulty, b.Bytes(), nil
+	return nil
 }
 
 func (r *Reader) Close() error {

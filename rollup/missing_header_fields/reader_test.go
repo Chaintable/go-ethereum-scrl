@@ -15,7 +15,7 @@ type header struct {
 	extra      []byte
 }
 
-var expectedMissingHeaders1 = []header{
+var expectedMissingHeaders = []header{
 	{0, 1, common.HexToHash("0x20695989e9038823e35f0e88fbc44659ffdbfa1fe89fbeb2689b43f15fa64cb5"), common.FromHex("000000000000000000000000000000000000000000000000000000000000000048c3f81f3d998b6652900e1c3183736c238fe4290000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")},
 	{1, 2, common.HexToHash("0x20695989e9038823e35f0e88fbc44659ffdbfa1fe89fbeb2689b43f15fa64cb5"), common.FromHex("d88304031d846765746888676f312e31392e31856c696e7578000000000000001982b5c754257988f9486b158a33709645735e8e965912c508aee9b0513cc2f22fe13f0835ce1e11abe666c9dba6a1259612b812783cc457e5b34b025980635501")},
 	{2, 2, common.HexToHash("0x11787ec3c17489215d0b13d594db83be55736f3933625aac0e1bba2812d49ffe"), common.FromHex("d88304031d846765746888676f312e31392e31856c696e757800000000000000237c933578bf062f86a30cdc71b0e946f0f685711e0e9cceeb1c953ed816d2694347e1e59625545c4040f2604b75448ccb5360fdcb378741331c1d4c0d342a7e01")},
@@ -43,22 +43,22 @@ func TestReader_Read(t *testing.T) {
 		require.Equal(t, expectedVanity, reader.sortedVanities[i])
 	}
 
-	readAndAssertHeader(t, reader, expectedMissingHeaders1, 0)
-	readAndAssertHeader(t, reader, expectedMissingHeaders1, 0)
-	readAndAssertHeader(t, reader, expectedMissingHeaders1, 1)
-	readAndAssertHeader(t, reader, expectedMissingHeaders1, 6)
+	readAndAssertHeader(t, reader, expectedMissingHeaders, 0)
+	readAndAssertHeader(t, reader, expectedMissingHeaders, 0)
+	readAndAssertHeader(t, reader, expectedMissingHeaders, 1)
+	readAndAssertHeader(t, reader, expectedMissingHeaders, 6)
 
 	// reading previous headers resets the file reader
-	readAndAssertHeader(t, reader, expectedMissingHeaders1, 5)
+	readAndAssertHeader(t, reader, expectedMissingHeaders, 5)
 
-	readAndAssertHeader(t, reader, expectedMissingHeaders1, 8)
-	readAndAssertHeader(t, reader, expectedMissingHeaders1, 8)
+	readAndAssertHeader(t, reader, expectedMissingHeaders, 8)
+	readAndAssertHeader(t, reader, expectedMissingHeaders, 8)
 
 	// reading previous headers resets the file reader
-	readAndAssertHeader(t, reader, expectedMissingHeaders1, 6)
+	readAndAssertHeader(t, reader, expectedMissingHeaders, 6)
 
-	readAndAssertHeader(t, reader, expectedMissingHeaders1, 9)
-	readAndAssertHeader(t, reader, expectedMissingHeaders1, 10)
+	readAndAssertHeader(t, reader, expectedMissingHeaders, 9)
+	readAndAssertHeader(t, reader, expectedMissingHeaders, 10)
 
 	// no data anymore
 	_, _, _, err = reader.Read(11)
