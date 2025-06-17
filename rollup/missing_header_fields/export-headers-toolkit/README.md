@@ -6,6 +6,8 @@ A toolkit for exporting and transforming missing block header fields of Scroll b
 We are using the [Clique consensus](https://eips.ethereum.org/EIPS/eip-225) in Scroll L2. Amongst others, it requires the following header fields:
 - `extraData`
 - `difficulty`
+- `coinbase`
+- `nonce`
 
 However, before EuclidV2, these fields were not stored on L1/DA.
 In order for nodes to be able to reconstruct the correct block hashes when only reading data from L1, 
@@ -31,12 +33,16 @@ Where:
 - unique_vanity_i: unique vanity i
 - header_i: block header i
 - header: 
-    <flags:uint8><vanity_index:uint8><state_root:[32]byte><seal:[65|85]byte>
+    <flags:uint8><vanity_index:uint8><state_root:[32]byte>[<coinbase:[20]byte>][<nonce:uint64>]<seal:[65|85]byte>
     - flags: bitmask, lsb first
+        - bit 4: 1 if the header has a coinbase field
+        - bit 5: 1 if the header has a nonce field
         - bit 6: 0 if difficulty is 2, 1 if difficulty is 1
         - bit 7: 0 if seal length is 65, 1 if seal length is 85
     - vanity_index: index of the vanity in the sorted vanities list (0-255)
     - state_root: 32 bytes of state root data
+    - coinbase: 20 bytes of coinbase address (if present)
+    - nonce: 8 bytes of nonce (if present)
     - seal: 65 or 85 bytes of seal data
 ```
 

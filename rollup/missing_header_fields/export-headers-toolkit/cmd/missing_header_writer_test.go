@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"testing"
 
+	coreTypes "github.com/scroll-tech/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -42,21 +43,27 @@ func TestMissingHeaderWriter(t *testing.T) {
 	// Header0
 	{
 		seal := randomSeal(65)
-		header := types.NewHeader(0, 2, stateRoot1, append(vanity1[:], seal...))
+		coinbase := common.Address{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+		nonce := coreTypes.BlockNonce{0, 1, 2, 3, 4, 5, 6, 7}
+		header := types.NewHeader(0, 2, stateRoot1, coinbase, nonce, append(vanity1[:], seal...))
 		mhw.write(header)
 
 		// bit 6=0: difficulty 2, bit 7=0: seal length 65
-		expectedBytes = append(expectedBytes, 0b00000000)
+		expectedBytes = append(expectedBytes, 0b00110000)
 		expectedBytes = append(expectedBytes, 0x00) // vanity index0
 		expectedBytes = append(expectedBytes, stateRoot1[:]...)
+		expectedBytes = append(expectedBytes, coinbase[:]...)
+		expectedBytes = append(expectedBytes, nonce[:]...)
 		expectedBytes = append(expectedBytes, seal...)
 		require.Equal(t, expectedBytes, bytesBuffer.Bytes())
 	}
 
 	// Header1
 	{
+		coinbase := common.Address{}
+		nonce := coreTypes.BlockNonce{}
 		seal := randomSeal(65)
-		header := types.NewHeader(1, 1, stateRoot2, append(vanity2[:], seal...))
+		header := types.NewHeader(1, 1, stateRoot2, coinbase, nonce, append(vanity2[:], seal...))
 		mhw.write(header)
 
 		// bit 6=1: difficulty 1, bit 7=0: seal length 65
@@ -68,15 +75,19 @@ func TestMissingHeaderWriter(t *testing.T) {
 	}
 
 	// Header2
+	coinbase := common.Address{1}
+	nonce := coreTypes.BlockNonce{201}
 	{
 		seal := randomSeal(85)
-		header := types.NewHeader(2, 2, stateRoot1, append(vanity2[:], seal...))
+		header := types.NewHeader(2, 2, stateRoot1, coinbase, nonce, append(vanity2[:], seal...))
 		mhw.write(header)
 
 		// bit 6=0: difficulty 2, bit 7=1: seal length 85
-		expectedBytes = append(expectedBytes, 0b10000000)
+		expectedBytes = append(expectedBytes, 0b10110000)
 		expectedBytes = append(expectedBytes, 0x01) // vanity index1
 		expectedBytes = append(expectedBytes, stateRoot1[:]...)
+		expectedBytes = append(expectedBytes, coinbase[:]...)
+		expectedBytes = append(expectedBytes, nonce[:]...)
 		expectedBytes = append(expectedBytes, seal...)
 		require.Equal(t, expectedBytes, bytesBuffer.Bytes())
 	}
@@ -84,13 +95,15 @@ func TestMissingHeaderWriter(t *testing.T) {
 	// Header3
 	{
 		seal := randomSeal(85)
-		header := types.NewHeader(3, 1, stateRoot2, append(vanity8[:], seal...))
+		header := types.NewHeader(3, 1, stateRoot2, coinbase, nonce, append(vanity8[:], seal...))
 		mhw.write(header)
 
 		// bit 6=1: difficulty 1, bit 7=1: seal length 85
-		expectedBytes = append(expectedBytes, 0b11000000)
+		expectedBytes = append(expectedBytes, 0b11110000)
 		expectedBytes = append(expectedBytes, 0x02) // vanity index2
 		expectedBytes = append(expectedBytes, stateRoot2[:]...)
+		expectedBytes = append(expectedBytes, coinbase[:]...)
+		expectedBytes = append(expectedBytes, nonce[:]...)
 		expectedBytes = append(expectedBytes, seal...)
 		require.Equal(t, expectedBytes, bytesBuffer.Bytes())
 	}
@@ -99,13 +112,15 @@ func TestMissingHeaderWriter(t *testing.T) {
 	{
 		stateRoot3 := common.Hash{123}
 		seal := randomSeal(65)
-		header := types.NewHeader(4, 2, stateRoot3, append(vanity1[:], seal...))
+		header := types.NewHeader(4, 2, stateRoot3, coinbase, nonce, append(vanity1[:], seal...))
 		mhw.write(header)
 
 		// bit 6=0: difficulty 2, bit 7=0: seal length 65
-		expectedBytes = append(expectedBytes, 0b00000000)
+		expectedBytes = append(expectedBytes, 0b00110000)
 		expectedBytes = append(expectedBytes, 0x00) // vanity index0
 		expectedBytes = append(expectedBytes, stateRoot3[:]...)
+		expectedBytes = append(expectedBytes, coinbase[:]...)
+		expectedBytes = append(expectedBytes, nonce[:]...)
 		expectedBytes = append(expectedBytes, seal...)
 		require.Equal(t, expectedBytes, bytesBuffer.Bytes())
 	}

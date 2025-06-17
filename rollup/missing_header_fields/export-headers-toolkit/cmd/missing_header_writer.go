@@ -9,6 +9,9 @@ import (
 	"os"
 	"sort"
 
+	"github.com/scroll-tech/go-ethereum/common"
+	coreTypes "github.com/scroll-tech/go-ethereum/core/types"
+
 	"github.com/scroll-tech/go-ethereum/export-headers-toolkit/types"
 )
 
@@ -95,14 +98,17 @@ func (m *missingHeaderWriter) writeVanities() {
 
 func (m *missingHeaderWriter) write(header *types.Header) {
 	// 1. prepare the bitmask
-	bits := newBitMask(int(header.Difficulty), header.SealLen())
+	hasCoinbase := header.Coinbase != (common.Address{})
+	hasNonce := header.Nonce != (coreTypes.BlockNonce{})
+
+	bits := newBitMask(hasCoinbase, hasNonce, int(header.Difficulty), header.SealLen())
 	vanityIndex := m.sortedVanitiesMap[header.Vanity()]
 
 	if vanityIndex >= maxVanityCount {
 		log.Fatalf("Vanity index %d exceeds maximum allowed %d", vanityIndex, maxVanityCount-1)
 	}
 
-	// 2. write the header: bitmask, vanity index and seal
+	// 2. write the header: bitmask, optional coinbase, optional nonce, vanity index and seal
 	if _, err := m.writer.Write(bits.Bytes()); err != nil {
 		log.Fatalf("Error writing bitmask: %v", err)
 	}
@@ -112,6 +118,17 @@ func (m *missingHeaderWriter) write(header *types.Header) {
 	if _, err := m.writer.Write(header.StateRoot[:]); err != nil {
 		log.Fatalf("Error writing state root: %v", err)
 	}
+	if hasCoinbase {
+		if _, err := m.writer.Write(header.Coinbase[:]); err != nil {
+			log.Fatalf("Error writing coinbase: %v", err)
+		}
+	}
+
+	if hasNonce {
+		if _, err := m.writer.Write(header.Nonce[:]); err != nil {
+			log.Fatalf("Error writing nonce: %v", err)
+		}
+	}
 	if _, err := m.writer.Write(header.Seal()); err != nil {
 		log.Fatalf("Error writing seal: %v", err)
 	}
@@ -119,8 +136,10 @@ func (m *missingHeaderWriter) write(header *types.Header) {
 
 // bitMask is a bitmask that encodes the following information:
 //
-//	bit 6: 0 if difficulty is 2, 1 if difficulty is 1
-//	bit 7: 0 if seal length is 65, 1 if seal length is 85
+// bit 4: 1 if the header has a coinbase field
+// bit 5: 1 if the header has a nonce field
+// bit 6: 0 if difficulty is 2, 1 if difficulty is 1
+// bit 7: 0 if seal length is 65, 1 if seal length is 85
 type bitMask struct {
 	b uint8
 }
@@ -129,9 +148,16 @@ func newBitMaskFromByte(b uint8) bitMask {
 	return bitMask{b}
 }
 
-func newBitMask(difficulty int, sealLen int) bitMask {
+func newBitMask(hasCoinbase bool, hasNonce bool, difficulty int, sealLen int) bitMask {
 	b := uint8(0)
 
+	if hasCoinbase {
+		b |= 1 << 4
+	}
+
+	if hasNonce {
+		b |= 1 << 5
+	}
 	if difficulty == 1 {
 		b |= 1 << 6
 	} else if difficulty != 2 {
@@ -163,6 +189,14 @@ func (b bitMask) sealLen() int {
 	} else {
 		return 85
 	}
+}
+
+func (b bitMask) hasCoinbase() bool {
+	return (b.b>>4)&0x01 == 1
+}
+
+func (b bitMask) hasNonce() bool {
+	return (b.b>>5)&0x01 == 1
 }
 
 func (b bitMask) Bytes() []byte {

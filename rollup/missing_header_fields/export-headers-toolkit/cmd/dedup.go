@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/scroll-tech/go-ethereum/common"
+	coreTypes "github.com/scroll-tech/go-ethereum/core/types"
 
 	"github.com/scroll-tech/go-ethereum/export-headers-toolkit/types"
 )
@@ -224,7 +225,7 @@ func (h *csvHeaderReader) readNext() *types.Header {
 	}
 
 	s := strings.Split(strings.TrimSpace(line), ",")
-	if len(s) != 4 {
+	if len(s) != 6 {
 		log.Fatalf("Malformed CSV line: %q", line)
 	}
 
@@ -238,10 +239,11 @@ func (h *csvHeaderReader) readNext() *types.Header {
 	}
 
 	stateRoot := common.HexToHash(s[2])
+	coinbase := common.HexToAddress(s[3])
+	nonceBytes := common.Hex2Bytes(s[4])
+	extra := common.FromHex(strings.Split(s[5], "\n")[0])
 
-	extra := common.FromHex(strings.Split(s[3], "\n")[0])
-
-	header := types.NewHeader(num, difficulty, stateRoot, extra)
+	header := types.NewHeader(num, difficulty, stateRoot, coinbase, coreTypes.BlockNonce(nonceBytes), extra)
 	return header
 }
 
@@ -280,13 +282,13 @@ func verifyOutputFile(verifyFile, outputFile string) {
 	for {
 		header := csvReader.readNext()
 		if header == nil {
-			if _, _, err = dedupReader.ReadNext(); err == nil {
+			if _, _, _, _, err = dedupReader.ReadNext(); err == nil {
 				log.Fatalf("Expected EOF, got more headers")
 			}
 			break
 		}
 
-		difficulty, stateRoot, extraData, err := dedupReader.Read(header.Number)
+		difficulty, stateRoot, coinbase, nonce, extraData, err := dedupReader.Read(header.Number)
 		if err != nil {
 			log.Fatalf("Error reading header: %v", err)
 		}
@@ -296,6 +298,12 @@ func verifyOutputFile(verifyFile, outputFile string) {
 		}
 		if header.StateRoot != stateRoot {
 			log.Fatalf("StateRoot mismatch: headerNum %d: %s != %s", header.Number, header.StateRoot, stateRoot)
+		}
+		if header.Coinbase != coinbase {
+			log.Fatalf("Coinbase mismatch: headerNum %d: %s != %s", header.Number, header.Coinbase.Hex(), coinbase.Hex())
+		}
+		if header.Nonce != nonce {
+			log.Fatalf("Nonce mismatch: headerNum %d: %s != %s", header.Number, common.Bytes2Hex(header.Nonce[:]), common.Bytes2Hex(nonce[:]))
 		}
 		if !bytes.Equal(header.ExtraData, extraData) {
 			log.Fatalf("ExtraData mismatch: headerNum %d: %x != %x", header.Number, header.ExtraData, extraData)
