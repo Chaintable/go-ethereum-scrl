@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 
 	"github.com/scroll-tech/go-ethereum/ethclient"
 
@@ -70,6 +72,18 @@ It produces a binary file and optionally a human readable csv file with the miss
 		if err != nil {
 			log.Fatalf("Error reading continue flag: %v", err)
 		}
+		dbDSN, err := cmd.Flags().GetString("db")
+		if err != nil {
+			log.Fatalf("Error reading db flag: %v", err)
+		}
+
+		var db *gorm.DB
+		if dbDSN != "" {
+			db, err = gorm.Open(postgres.Open(dbDSN), &gorm.Config{})
+			if err != nil {
+				log.Fatalf("Error connecting to database: %v", err)
+			}
+		}
 
 		if continueFile != "" {
 			fmt.Println("Continue fetching block header fields from", continueFile)
@@ -92,7 +106,7 @@ It produces a binary file and optionally a human readable csv file with the miss
 			}
 		}
 
-		runFetch(clients, startBlockNum, endBlockNum, batchSize, maxParallelGoroutines, outputFile, humanReadableOutputFile, continueFile)
+		runFetch(clients, db, startBlockNum, endBlockNum, batchSize, maxParallelGoroutines, outputFile, humanReadableOutputFile, continueFile)
 	},
 }
 
@@ -107,6 +121,7 @@ func init() {
 	fetchCmd.Flags().String("output", "headers.bin", "output file")
 	fetchCmd.Flags().String("humanOutput", "", "additionally produce human readable csv file")
 	fetchCmd.Flags().String("continue", "", "continue fetching block header fields from the last seen block number in the specified continue file")
+	fetchCmd.Flags().String("db", "", "database to use instead of fetching from RPC")
 }
 
 func headerByNumberWithRetry(client *ethclient.Client, blockNum uint64, maxRetries int) (*types.Header, error) {
@@ -118,6 +133,8 @@ func headerByNumberWithRetry(client *ethclient.Client, blockNum uint64, maxRetri
 				header.Number.Uint64(),
 				header.Difficulty.Uint64(),
 				header.Root,
+				header.Coinbase,
+				header.Nonce,
 				header.Extra,
 			), nil
 		}
@@ -132,7 +149,26 @@ func headerByNumberWithRetry(client *ethclient.Client, blockNum uint64, maxRetri
 	return nil, fmt.Errorf("error fetching header for block %d: %v", blockNum, innerErr)
 }
 
-func fetchHeaders(clients []*ethclient.Client, start, end uint64, headersChan chan<- *types.Header) {
+func fetchHeadersFromDB(db *gorm.DB, start, end uint64, headersChan chan<- *types.Header) {
+	blockORM := types.NewL2Block(db)
+	blocks, err := blockORM.GetL2BlocksInRange(context.Background(), start, end)
+	if err != nil {
+		log.Fatalf("Error fetching blocks from database: %v", err)
+	}
+
+	for _, block := range blocks {
+		headersChan <- types.NewHeader(
+			block.Header.Number.Uint64(),
+			block.Header.Difficulty.Uint64(),
+			block.Header.Root,
+			block.Header.Coinbase,
+			block.Header.Nonce,
+			block.Header.Extra,
+		)
+	}
+}
+
+func fetchHeadersFromRPC(clients []*ethclient.Client, start, end uint64, headersChan chan<- *types.Header) {
 	// randomize client selection to distribute load
 	r := uint64(rand.Int())
 
@@ -199,7 +235,7 @@ func writeHeadersToFile(outputFile string, humanReadableOutputFile string, conti
 	fmt.Println("Finished writing headers to file, last block number:", nextHeaderNum-1)
 }
 
-func runFetch(clients []*ethclient.Client, startBlockNum uint64, endBlockNum uint64, batchSize uint64, maxGoroutines int, outputFile string, humanReadableOutputFile string, continueFile string) {
+func runFetch(clients []*ethclient.Client, db *gorm.DB, startBlockNum uint64, endBlockNum uint64, batchSize uint64, maxGoroutines int, outputFile string, humanReadableOutputFile string, continueFile string) {
 	headersChan := make(chan *types.Header, maxGoroutines*int(batchSize))
 	tasks := make(chan task)
 
@@ -222,10 +258,23 @@ func runFetch(clients []*ethclient.Client, startBlockNum uint64, endBlockNum uin
 					break
 				}
 				log.Println("Received task", t.start, "to", t.end)
-				fetchHeaders(clients, t.start, t.end, headersChan)
+
+				// use DB if dbDSN is provided, otherwise fetch from RPC
+				if db != nil {
+					fetchHeadersFromDB(db, t.start, t.end, headersChan)
+				} else {
+					fetchHeadersFromRPC(clients, t.start, t.end, headersChan)
+				}
 			}
 			wgProducers.Done()
 		}()
+	}
+
+	// need to fetch block 0 from RPC
+	if startBlockNum == 0 && db != nil {
+		fmt.Println("Fetching headers from database... and header 0 from RPC")
+		fetchHeadersFromRPC(clients, 0, 0, headersChan)
+		startBlockNum = 1
 	}
 
 	// create tasks/work packages for producer goroutines
