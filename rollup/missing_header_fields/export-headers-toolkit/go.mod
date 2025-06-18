@@ -3,9 +3,12 @@ module github.com/scroll-tech/go-ethereum/export-headers-toolkit
 go 1.22
 
 require (
+	github.com/scroll-tech/da-codec v0.0.0-20240605080813-32bfc9fccde7
 	github.com/scroll-tech/go-ethereum v1.10.14-0.20240624092647-7da0bd5480e9
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
+	gorm.io/driver/postgres v1.5.7
+	gorm.io/gorm v1.25.7-0.20240204074919-46816ad31dde
 )
 
 require (
@@ -53,7 +56,6 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rjeczalik/notify v0.9.1 // indirect
 	github.com/rs/cors v1.7.0 // indirect
-	github.com/scroll-tech/da-codec v0.0.0-20240605080813-32bfc9fccde7 // indirect
 	github.com/scroll-tech/zktrie v0.8.4 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
@@ -72,7 +74,5 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gorm.io/driver/postgres v1.5.7 // indirect
-	gorm.io/gorm v1.25.7-0.20240204074919-46816ad31dde // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
