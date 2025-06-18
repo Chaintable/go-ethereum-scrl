@@ -22,7 +22,7 @@ func TestManagerDownload(t *testing.T) {
 	filePath := filepath.Join(t.TempDir(), "test_file_path")
 	manager := NewManager(context.Background(), filePath, downloadURL, sha256)
 
-	_, _, _, err := manager.GetMissingHeaderFields(0)
+	_, _, _, _, _, err := manager.GetMissingHeaderFields(0)
 	require.NoError(t, err)
 
 	// Check if the file was downloaded and tmp file was removed
@@ -42,19 +42,21 @@ func TestManagerChecksum(t *testing.T) {
 
 		manager := NewManager(context.Background(), filePath, downloadURL, sha256)
 
-		_, _, _, err := manager.GetMissingHeaderFields(0)
+		_, _, _, _, _, err := manager.GetMissingHeaderFields(0)
 		require.ErrorContains(t, err, "expectedChecksum mismatch")
 	}
 
 	// Checksum matches
 	{
-		sha256 := [32]byte(common.FromHex("e5a1e71338cd899e46ff28a9ae81b8f2579e429e18cec463104fb246a6e23502"))
+		sha256 := [32]byte(common.FromHex("635c3f56bb66035bd99134a1e2bc23b34df376f4cd51a0c65e347ce3e65b5974"))
 		manager := NewManager(context.Background(), filePath, downloadURL, sha256)
 
-		difficulty, stateRoot, extra, err := manager.GetMissingHeaderFields(0)
+		difficulty, stateRoot, coinbase, nonce, extra, err := manager.GetMissingHeaderFields(0)
 		require.NoError(t, err)
 		require.Equal(t, expectedMissingHeaders[0].difficulty, difficulty)
 		require.Equal(t, expectedMissingHeaders[0].stateRoot, stateRoot)
+		require.Equal(t, expectedMissingHeaders[0].coinbase, coinbase)
+		require.Equal(t, expectedMissingHeaders[0].nonce, nonce)
 		require.Equal(t, expectedMissingHeaders[0].extra, extra)
 	}
 }
