@@ -40,8 +40,8 @@ var (
 	ScrollMainnetGenesisHash               = common.HexToHash("0xbbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80")
 	ScrollSepoliaGenesisState              = common.HexToHash("0x20695989e9038823e35f0e88fbc44659ffdbfa1fe89fbeb2689b43f15fa64cb5")
 	ScrollMainnetGenesisState              = common.HexToHash("0x08d535cc60f40af5dd3b31e0998d7567c2d568b224bed2ba26070aeb078d1339")
-	ScrollMainnetMissingHeaderFieldsSHA256 = common.HexToHash("0x9062e2fa1200dca63bee1d18d429572f134f5f0c98cb4852f62fc394e33cf6e6")
-	ScrollSepoliaMissingHeaderFieldsSHA256 = common.HexToHash("0x3629f5e53250a526ffc46806c4d74b9c52c9209a6d45ecdfebdef5d596bb3f40")
+	ScrollMainnetMissingHeaderFieldsSHA256 = common.HexToHash("0xfa2746026ec9590e37e495cb20046e20a38fd0e7099abd2012640dddf6c88b25")
+	ScrollSepoliaMissingHeaderFieldsSHA256 = common.HexToHash("0xa02354c12ca0f918bf4768255af9ed13c137db7e56252348f304b17bb4088924")
 )
 
 func newUint64(val uint64) *uint64 { return &val }
