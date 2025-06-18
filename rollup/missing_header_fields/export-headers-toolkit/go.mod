@@ -3,9 +3,12 @@ module github.com/scroll-tech/go-ethereum/export-headers-toolkit
 go 1.22
 
 require (
+	github.com/scroll-tech/da-codec v0.0.0-20240605080813-32bfc9fccde7
 	github.com/scroll-tech/go-ethereum v1.10.14-0.20240624092647-7da0bd5480e9
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
+	gorm.io/driver/postgres v1.5.7
+	gorm.io/gorm v1.25.7-0.20240204074919-46816ad31dde
 )
 
 require (
@@ -34,7 +37,12 @@ require (
 	github.com/huin/goupnp v1.0.2 // indirect
 	github.com/iden3/go-iden3-crypto v0.0.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
+	github.com/jackc/pgx/v5 v5.4.3 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2-0.20160603034137-1fa385a6f458 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
@@ -48,7 +56,6 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rjeczalik/notify v0.9.1 // indirect
 	github.com/rs/cors v1.7.0 // indirect
-	github.com/scroll-tech/da-codec v0.0.0-20240605080813-32bfc9fccde7 // indirect
 	github.com/scroll-tech/zktrie v0.8.4 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
