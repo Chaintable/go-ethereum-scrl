@@ -1388,10 +1388,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		cfg.DaSyncingEnabled = ctx.Bool(DASyncEnabledFlag.Name)
 	}
 
-	cfg.DAMissingHeaderFieldsBaseURL = DAMissingHeaderFieldsBaseURLFlag.Value
-	if ctx.GlobalIsSet(DAMissingHeaderFieldsBaseURLFlag.Name) {
-		cfg.DAMissingHeaderFieldsBaseURL = ctx.GlobalString(DAMissingHeaderFieldsBaseURLFlag.Name)
-	}
+	cfg.DAMissingHeaderFieldsBaseURL = ctx.GlobalString(DAMissingHeaderFieldsBaseURLFlag.Name)
 
 	if ctx.GlobalIsSet(ExternalSignerFlag.Name) {
 		cfg.ExternalSigner = ctx.GlobalString(ExternalSignerFlag.Name)
