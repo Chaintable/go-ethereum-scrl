@@ -135,7 +135,7 @@ func (c *CommitBatchDAV0) Blocks(manager *missing_header_fields.Manager) ([]*Par
 			// insert l2 txs
 			txs = append(txs, chunk.Transactions[blockIndex]...)
 
-			difficulty, stateRoot, _, _, extraData, err := manager.GetMissingHeaderFields(daBlock.Number())
+			difficulty, stateRoot, coinbase, nonce, extraData, err := manager.GetMissingHeaderFields(daBlock.Number())
 			if err != nil {
 				return nil, fmt.Errorf("failed to get missing header fields for block %d: %w", daBlock.Number(), err)
 			}
@@ -149,6 +149,8 @@ func (c *CommitBatchDAV0) Blocks(manager *missing_header_fields.Manager) ([]*Par
 					Difficulty: difficulty,
 					ExtraData:  extraData,
 					StateRoot:  stateRoot,
+					Coinbase:   coinbase,
+					Nonce:      nonce,
 				},
 				txs)
 			blocks = append(blocks, block)

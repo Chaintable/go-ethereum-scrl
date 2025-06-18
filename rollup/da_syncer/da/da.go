@@ -55,6 +55,8 @@ type PartialHeader struct {
 	Difficulty uint64
 	ExtraData  []byte
 	StateRoot  common.Hash
+	Coinbase   common.Address
+	Nonce      types.BlockNonce
 }
 
 func (h *PartialHeader) ToHeader() *types.Header {
@@ -66,6 +68,8 @@ func (h *PartialHeader) ToHeader() *types.Header {
 		Difficulty: new(big.Int).SetUint64(h.Difficulty),
 		Extra:      h.ExtraData,
 		Root:       h.StateRoot,
+		Coinbase:   h.Coinbase,
+		Nonce:      h.Nonce,
 	}
 }
 
