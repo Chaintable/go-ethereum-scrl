@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/scroll-tech/go-ethereum/common"
@@ -188,31 +187,6 @@ type bitMask struct {
 }
 
 func newBitMaskFromByte(b uint8) bitMask {
-	return bitMask{b}
-}
-
-func newBitMask(hasCoinbase bool, hasNonce bool, difficulty int, sealLen int) bitMask {
-	b := uint8(0)
-
-	if hasCoinbase {
-		b |= 1 << 4
-	}
-
-	if hasNonce {
-		b |= 1 << 5
-	}
-	if difficulty == 1 {
-		b |= 1 << 6
-	} else if difficulty != 2 {
-		log.Fatalf("Invalid difficulty: %d", difficulty)
-	}
-
-	if sealLen == 85 {
-		b |= 1 << 7
-	} else if sealLen != 65 {
-		log.Fatalf("Invalid seal length: %d", sealLen)
-	}
-
 	return bitMask{b}
 }
 
