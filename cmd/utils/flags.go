@@ -1812,8 +1812,8 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		cfg.TxGossipReceivingDisabled = ctx.GlobalBool(TxGossipReceivingDisabledFlag.Name)
 		log.Info("Transaction gossip receiving disabled", "disabled", cfg.TxGossipReceivingDisabled)
 	}
-	if ctx.IsSet(TxGossipReceivingDisabledFlag.Name) && !ctx.IsSet(MiningEnabledFlag.Name) {
-		cfg.TxGossipSequencerHTTP = ctx.String(TxGossipReceivingDisabledFlag.Name)
+	if ctx.IsSet(TxGossipSequencerHTTPFlag.Name) && !ctx.IsSet(MiningEnabledFlag.Name) {
+		cfg.TxGossipSequencerHTTP = ctx.String(TxGossipSequencerHTTPFlag.Name)
 	}
 
 	// Cap the cache allowance and tune the garbage collector

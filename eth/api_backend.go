@@ -276,6 +276,7 @@ func (b *EthAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction)
 			return err
 		}
 		if err := b.eth.seqRPCService.CallContext(ctx, nil, "eth_sendRawTransaction", hexutil.Encode(data)); err != nil {
+			log.Warn("failed to send tx to sequencer", "tx", signedTx.Hash())
 			return err
 		}
 	}
