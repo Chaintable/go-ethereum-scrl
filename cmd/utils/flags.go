@@ -902,6 +902,10 @@ var (
 		Name:  "txgossip.disablereceiving",
 		Usage: "Disable gossip receiving transactions from other peers",
 	}
+	TxGossipSequencerHTTPFlag = &cli.StringFlag{
+		Name:  "txgossip.sequencerhttp",
+		Usage: "Sequencer mempool HTTP endpoint",
+	}
 
 	// DA syncing settings
 	DASyncEnabledFlag = cli.BoolFlag{
@@ -1807,6 +1811,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	if ctx.GlobalIsSet(TxGossipReceivingDisabledFlag.Name) {
 		cfg.TxGossipReceivingDisabled = ctx.GlobalBool(TxGossipReceivingDisabledFlag.Name)
 		log.Info("Transaction gossip receiving disabled", "disabled", cfg.TxGossipReceivingDisabled)
+	}
+	if ctx.IsSet(TxGossipReceivingDisabledFlag.Name) && !ctx.IsSet(MiningEnabledFlag.Name) {
+		cfg.TxGossipSequencerHTTP = ctx.String(TxGossipReceivingDisabledFlag.Name)
 	}
 
 	// Cap the cache allowance and tune the garbage collector

@@ -109,6 +109,9 @@ type Ethereum struct {
 	p2pServer *p2p.Server
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
+
+	// Scroll additions
+	seqRPCService        *rpc.Client
 }
 
 // New creates a new Ethereum object (including the
@@ -294,7 +297,7 @@ func New(stack *node.Node, config *ethconfig.Config, l1Client l1.Client) (*Ether
 	// Some of the extraData is used with Clique consensus (before EuclidV2). After EuclidV2 we use SystemContract consensus where this is overridden when creating a block.
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
-	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil}
+	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, config.TxGossipReceivingDisabled, eth, nil}
 	if eth.APIBackend.allowUnprotectedTxs {
 		log.Info("Unprotected transactions allowed")
 	}
@@ -304,6 +307,16 @@ func New(stack *node.Node, config *ethconfig.Config, l1Client l1.Client) (*Ether
 	}
 	gpoParams.DefaultBasePrice = new(big.Int).SetUint64(config.TxPool.PriceLimit)
 	eth.APIBackend.gpo = gasprice.NewOracle(eth.APIBackend, gpoParams)
+
+	if config.TxGossipSequencerHTTP != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		client, err := rpc.DialContext(ctx, config.TxGossipSequencerHTTP)
+		cancel()
+		if err != nil {
+			return nil, fmt.Errorf("cannot initialize rollup sequencer client: %w", err)
+		}
+		eth.seqRPCService = client
+	}
 
 	// Setup DNS discovery iterators.
 	dnsclient := dnsdisc.NewClient(dnsdisc.Config{})
@@ -677,6 +690,9 @@ func (s *Ethereum) Stop() error {
 	}
 	s.blockchain.Stop()
 	s.engine.Close()
+	if s.seqRPCService != nil {
+		s.seqRPCService.Close()
+	}
 	rawdb.PopUncleanShutdownMarker(s.chainDb)
 	s.chainDb.Close()
 	s.eventMux.Stop()
