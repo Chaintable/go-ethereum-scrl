@@ -1812,6 +1812,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		cfg.TxGossipReceivingDisabled = ctx.GlobalBool(TxGossipReceivingDisabledFlag.Name)
 		log.Info("Transaction gossip receiving disabled", "disabled", cfg.TxGossipReceivingDisabled)
 	}
+	// Only configure sequencer http flag if we're running in verifier mode i.e. --mine is disabled.
 	if ctx.IsSet(TxGossipSequencerHTTPFlag.Name) && !ctx.IsSet(MiningEnabledFlag.Name) {
 		cfg.TxGossipSequencerHTTP = ctx.String(TxGossipSequencerHTTPFlag.Name)
 	}
