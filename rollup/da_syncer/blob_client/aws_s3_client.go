@@ -26,7 +26,7 @@ type AwsS3Client struct {
 func NewAwsS3Client(apiEndpoint string) *AwsS3Client {
 	return &AwsS3Client{
 		apiEndpoint: apiEndpoint,
-		client:      &http.Client{Timeout: BlockNativeDefaultTimeout},
+		client:      &http.Client{Timeout: AwsS3DefaultTimeout},
 	}
 }
 
