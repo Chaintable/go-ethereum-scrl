@@ -258,6 +258,7 @@ func (s *SystemContract) Prepare(chain consensus.ChainHeaderReader, header *type
 		return consensus.ErrUnknownAncestor
 	}
 	if timeOverride != nil {
+		log.Info("hhf debug..........")
 		header.Time = *timeOverride
 	} else {
 		header.Time = s.CalcTimestamp(parent)
