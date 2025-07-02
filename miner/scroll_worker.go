@@ -554,6 +554,7 @@ func (w *worker) newWork(now time.Time, parent *types.Block, reorging bool, reor
 		vmConfig.Tracer = cccLogger
 	}
 	deadline := time.Unix(int64(header.Time), 0)
+	log.Info("the new work deadline", "deadline", deadline, "headerTime", header.Time, "headerNumber", header.Number)
 	if w.chainConfig.Clique != nil && w.chainConfig.Clique.RelaxedPeriod {
 		// clique with relaxed period uses time.Now() as the header.Time, calculate the deadline
 		deadline = time.Unix(int64(header.Time+w.chainConfig.Clique.Period), 0)

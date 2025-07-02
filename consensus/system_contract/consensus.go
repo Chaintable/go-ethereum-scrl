@@ -258,12 +258,11 @@ func (s *SystemContract) Prepare(chain consensus.ChainHeaderReader, header *type
 		return consensus.ErrUnknownAncestor
 	}
 	if timeOverride != nil {
-		log.Info("hhf debug..........")
 		header.Time = *timeOverride
 	} else {
 		header.Time = s.CalcTimestamp(parent)
 	}
-
+	log.Info("Preparing header", "number", header.Number, "time", time.Unix(int64(header.Time), 0).Format(time.RFC3339))
 	// Difficulty must be 1
 	header.Difficulty = big.NewInt(1)
 
