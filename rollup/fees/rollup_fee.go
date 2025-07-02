@@ -207,6 +207,8 @@ func estimateTxCompressionRatio(data []byte, blockNumber uint64, blockTime uint6
 	ratio := new(big.Int).Mul(originalSize, rcfg.Precision)
 	ratio.Div(ratio, compressedSize)
 
+	log.Info("Estimated compression ratio", "ratio", ratio, "original size", originalSize, "compressed size", compressedSize, "data size", len(data), "data", common.Bytes2Hex(data))
+
 	return ratio, nil
 }
 
