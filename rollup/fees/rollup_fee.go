@@ -197,6 +197,7 @@ func estimateTxCompressionRatio(data []byte, blockNumber uint64, blockTime uint6
 	// Make sure compression ratio >= 1 by checking if compressed data is bigger or equal to original data
 	// This behavior is consistent with DA Batch compression in codecv7 and later versions
 	if len(compressed) >= len(data) {
+		log.Info("Estimated compression ratio Precision", "block number", blockNumber, "ratio", rcfg.Precision)
 		return rcfg.Precision, nil
 	}
 
