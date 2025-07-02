@@ -29,8 +29,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/syndtr/goleveldb/leveldb"
-
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/common/hexutil"
 	"github.com/scroll-tech/go-ethereum/core"
@@ -46,6 +44,7 @@ import (
 	"github.com/scroll-tech/go-ethereum/rollup/rcfg"
 	"github.com/scroll-tech/go-ethereum/rpc"
 	"github.com/scroll-tech/go-ethereum/trie"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // PublicEthereumAPI provides an API to access Ethereum full node-related
@@ -337,25 +336,25 @@ func (api *PublicDebugAPI) ExecutionWitness(ctx context.Context, blockNrOrHash r
 		return nil, fmt.Errorf("block not found: %s", blockNrOrHash.String())
 	}
 
-	witness, err := generateWitness(api.eth.blockchain, block)
+	witness, stateChanges, err := generateWitness(api.eth.blockchain, block)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate witness: %w", err)
 	}
 
-	return ToExecutionWitness(witness), nil
+	return ToExecutionWitness(witness, stateChanges), nil
 }
 
-func generateWitness(blockchain *core.BlockChain, block *types.Block) (*stateless.Witness, error) {
+func generateWitness(blockchain *core.BlockChain, block *types.Block) (*stateless.Witness, *state.StateChanges, error) {
 	witness, err := stateless.NewWitness(block.Header(), blockchain)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create witness: %w", err)
+		return nil, nil, fmt.Errorf("failed to create witness: %w", err)
 	}
 
 	parentHeader := witness.Headers[0]
 	// Avoid using snapshots to properly collect the witness data for all reads
 	statedb, err := state.New(parentHeader.Root, blockchain.StateCache(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve parent state: %w", err)
+		return nil, nil, fmt.Errorf("failed to retrieve parent state: %w", err)
 	}
 	statedb.WithWitness(witness)
 
@@ -367,19 +366,28 @@ func generateWitness(blockchain *core.BlockChain, block *types.Block) (*stateles
 	// sure that this is always present in the execution witness.
 	statedb.GetState(rcfg.L1GasPriceOracleAddress, rcfg.IsFeynmanSlot)
 
+	// Create a snapshot of the pre-execution state
+	preStateSnapshot := statedb.CreateStateSnapshot()
+
 	receipts, _, usedGas, err := blockchain.Processor().Process(block, statedb, *blockchain.GetVMConfig())
 	if err != nil {
-		return nil, fmt.Errorf("failed to process block %d: %w", block.Number(), err)
+		return nil, nil, fmt.Errorf("failed to process block %d: %w", block.Number(), err)
 	}
 
+	// Create a snapshot of the post-execution state
+	postStateSnapshot := statedb.CreateStateSnapshot()
+
+	// Calculate state changes
+	stateChanges := statedb.CalculateStateChanges(preStateSnapshot, postStateSnapshot)
+
 	if err := blockchain.Validator().ValidateState(block, statedb, receipts, usedGas); err != nil {
-		return nil, fmt.Errorf("failed to validate block %d: %w", block.Number(), err)
+		return nil, nil, fmt.Errorf("failed to validate block %d: %w", block.Number(), err)
 	}
 
 	if err = testWitness(blockchain, block, witness); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return witness, nil
+	return witness, stateChanges, nil
 }
 
 func testWitness(blockchain *core.BlockChain, block *types.Block, witness *stateless.Witness) error {
@@ -420,7 +428,7 @@ func testWitness(blockchain *core.BlockChain, block *types.Block, witness *state
 	computedRoot := statedb.GetRootHash()
 	if computedRoot != postStateRoot {
 		log.Debug("State root mismatch", "block", block.Number(), "expected", postStateRoot.Hex(), "got", computedRoot)
-		executionWitness := ToExecutionWitness(witness)
+		executionWitness := ToExecutionWitness(witness, nil)
 		jsonStr, err := json.Marshal(executionWitness)
 		if err != nil {
 			return fmt.Errorf("state root mismatch after processing block %d (hash: %s): expected %s, got %s, but failed to marshal witness: %w", block.Number(), block.Hash().Hex(), postStateRoot.Hex(), computedRoot, err)
@@ -434,9 +442,10 @@ func testWitness(blockchain *core.BlockChain, block *types.Block, witness *state
 // In the future, we'll probably consider using the extWitness format instead for less overhead if performance becomes an issue.
 // Currently using this format for ease of reading, parsing and compatibility across clients.
 type ExecutionWitness struct {
-	Headers []*types.Header   `json:"headers"`
-	Codes   map[string]string `json:"codes"`
-	State   map[string]string `json:"state"`
+	Headers      []*types.Header     `json:"headers"`
+	Codes        map[string]string   `json:"codes"`
+	State        map[string]string   `json:"state"`
+	StateChanges *state.StateChanges `json:"stateChanges,omitempty"`
 }
 
 func transformMap(in map[string]struct{}) map[string]string {
@@ -452,11 +461,12 @@ func transformMap(in map[string]struct{}) map[string]string {
 // ToExecutionWitness converts a witness to an execution witness format that is compatible with reth.
 // keccak(node) => node
 // keccak(bytecodes) => bytecodes
-func ToExecutionWitness(w *stateless.Witness) *ExecutionWitness {
+func ToExecutionWitness(w *stateless.Witness, stateChanges *state.StateChanges) *ExecutionWitness {
 	return &ExecutionWitness{
-		Headers: w.Headers,
-		Codes:   transformMap(w.Codes),
-		State:   transformMap(w.State),
+		Headers:      w.Headers,
+		Codes:        transformMap(w.Codes),
+		State:        transformMap(w.State),
+		StateChanges: stateChanges,
 	}
 }
 

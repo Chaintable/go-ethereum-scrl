@@ -1196,3 +1196,144 @@ func (s *StateDB) AddressInAccessList(addr common.Address) bool {
 func (s *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressPresent bool, slotPresent bool) {
 	return s.accessList.Contains(addr, slot)
 }
+
+// AccountState represents the detailed state of an account for debugging
+type AccountState struct {
+	Address          string            `json:"address"`
+	Balance          string            `json:"balance"`
+	Nonce            uint64            `json:"nonce"`
+	KeccakCodeHash   string            `json:"keccakCodeHash"`
+	PoseidonCodeHash string            `json:"poseidonCodeHash"`
+	CodeSize         uint64            `json:"codeSize"`
+	StorageRoot      string            `json:"storageRoot"`
+	Storage          map[string]string `json:"storage"`
+	Code             string            `json:"code"`
+	Deleted          bool              `json:"deleted"`
+}
+
+// StateChanges represents the state changes between pre and post block execution
+type StateChanges struct {
+	PreState  map[string]*AccountState `json:"preState"`
+	PostState map[string]*AccountState `json:"postState"`
+	Modified  []string                 `json:"modified"` // List of modified account addresses
+}
+
+// CreateStateSnapshot creates a snapshot of all state objects in the StateDB
+func (s *StateDB) CreateStateSnapshot() map[string]*AccountState {
+	snapshot := make(map[string]*AccountState)
+
+	for addr, obj := range s.stateObjects {
+		if obj == nil {
+			continue
+		}
+
+		addrStr := addr.Hex()
+		storage := make(map[string]string)
+
+		// Get storage changes from dirtyStorage
+		for key, value := range obj.dirtyStorage {
+			storage[key.Hex()] = value.Hex()
+		}
+
+		// Get storage changes from pendingStorage
+		for key, value := range obj.pendingStorage {
+			storage[key.Hex()] = value.Hex()
+		}
+
+		// Get code
+		var codeStr string
+		if len(obj.code) > 0 {
+			codeStr = fmt.Sprintf("0x%x", obj.code)
+		}
+
+		accountState := &AccountState{
+			Address:          addrStr,
+			Balance:          obj.data.Balance.String(),
+			Nonce:            obj.data.Nonce,
+			KeccakCodeHash:   fmt.Sprintf("0x%x", obj.data.KeccakCodeHash),
+			PoseidonCodeHash: fmt.Sprintf("0x%x", obj.data.PoseidonCodeHash),
+			CodeSize:         obj.data.CodeSize,
+			StorageRoot:      obj.data.Root.Hex(),
+			Storage:          storage,
+			Code:             codeStr,
+			Deleted:          obj.deleted,
+		}
+
+		snapshot[addrStr] = accountState
+	}
+
+	return snapshot
+}
+
+// CalculateStateChanges compares pre and post state snapshots to identify changes
+func (s *StateDB) CalculateStateChanges(preState, postState map[string]*AccountState) *StateChanges {
+	modified := make([]string, 0)
+	modifiedSet := make(map[string]bool)
+
+	// Find all addresses that were modified
+	for addr := range preState {
+		if _, exists := postState[addr]; exists {
+			if !accountStatesEqual(preState[addr], postState[addr]) {
+				if !modifiedSet[addr] {
+					modified = append(modified, addr)
+					modifiedSet[addr] = true
+				}
+			}
+		} else {
+			// Account was deleted
+			if !modifiedSet[addr] {
+				modified = append(modified, addr)
+				modifiedSet[addr] = true
+			}
+		}
+	}
+
+	// Find newly created accounts
+	for addr := range postState {
+		if _, exists := preState[addr]; !exists {
+			if !modifiedSet[addr] {
+				modified = append(modified, addr)
+				modifiedSet[addr] = true
+			}
+		}
+	}
+
+	return &StateChanges{
+		PreState:  preState,
+		PostState: postState,
+		Modified:  modified,
+	}
+}
+
+// accountStatesEqual compares two AccountState objects for equality
+func accountStatesEqual(a, b *AccountState) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+
+	if a.Balance != b.Balance ||
+		a.Nonce != b.Nonce ||
+		a.KeccakCodeHash != b.KeccakCodeHash ||
+		a.PoseidonCodeHash != b.PoseidonCodeHash ||
+		a.CodeSize != b.CodeSize ||
+		a.StorageRoot != b.StorageRoot ||
+		a.Code != b.Code ||
+		a.Deleted != b.Deleted {
+		return false
+	}
+
+	// Compare storage maps
+	if len(a.Storage) != len(b.Storage) {
+		return false
+	}
+	for k, v := range a.Storage {
+		if b.Storage[k] != v {
+			return false
+		}
+	}
+
+	return true
+}
