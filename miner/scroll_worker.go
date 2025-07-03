@@ -400,6 +400,7 @@ func (w *worker) mainLoop() {
 		case <-w.current.deadlineCh():
 			idleTimer.UpdateSince(idleStart)
 			w.current.deadlineReached = true
+			log.Info("the current work deadline reached", "number", w.current.header.Number, "txs", len(w.current.txs))
 			if len(w.current.txs) > 0 {
 				_, err = w.commit()
 			} else if w.config.AllowEmpty {
