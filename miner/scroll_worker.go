@@ -370,6 +370,7 @@ func (w *worker) mainLoop() {
 				// `updateSnapshot` and other functionalities.
 				time.Sleep(5 * time.Second)
 			}
+			log.Info("handle retryableCommitError tryCommitNewWork")
 			if _, err = w.tryCommitNewWork(time.Now(), w.current.header.ParentHash, w.current.reorging, w.current.reorgReason); err != nil {
 				continue
 			}
@@ -388,6 +389,7 @@ func (w *worker) mainLoop() {
 					return
 				}
 			}
+			log.Info("handle startCh tryCommitNewWork")
 			_, err = w.tryCommitNewWork(time.Now(), w.chain.CurrentHeader().Hash(), false, nil)
 		case trigger := <-w.reorgCh:
 			idleTimer.UpdateSince(idleStart)
@@ -395,6 +397,7 @@ func (w *worker) mainLoop() {
 		case chainHead := <-w.chainHeadCh:
 			idleTimer.UpdateSince(idleStart)
 			if w.isCanonical(chainHead.Block.Header()) {
+				log.Info("handle chainHead tryCommitNewWork")
 				_, err = w.tryCommitNewWork(time.Now(), chainHead.Block.Hash(), false, nil)
 			}
 		case <-w.current.deadlineCh():
@@ -1160,6 +1163,7 @@ func (w *worker) handleReorg(trigger *reorgTrigger) error {
 			return nil
 		}
 
+		log.Info("handleReorg tryCommitNewWork", "parentHash", parentHash, "reorgReason", reorgReason)
 		newBlockHash, err := w.tryCommitNewWork(time.Now(), parentHash, true, reorgReason)
 		if err != nil {
 			return err
