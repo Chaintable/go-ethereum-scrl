@@ -65,7 +65,7 @@ jobs:
         run: node .github/scripts/bump_version_dot_go.mjs
 
         # Commits made by this Action do not trigger new Workflow runs
-      - uses: stefanzweifel/git-auto-commit-action@e348103e9026cc0eee72ae06630dbe30c8bf7a79 # v5.1.0
+      - uses: stefanzweifel/git-auto-commit-action@778341af668090896ca464160c2def5d1d1a3eb0 # v6.0.1
         if: steps.check_diff.outputs.result == 'bump'
         with:
           skip_fetch: true # already did fetch in check diff
