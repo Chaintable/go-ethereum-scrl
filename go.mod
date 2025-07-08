@@ -2,8 +2,6 @@ module github.com/scroll-tech/go-ethereum
 
 go 1.22
 
-toolchain go1.24.1
-
 require (
 	github.com/Azure/azure-storage-blob-go v0.7.0
 	github.com/VictoriaMetrics/fastcache v1.12.2
