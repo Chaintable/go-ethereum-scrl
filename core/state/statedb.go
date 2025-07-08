@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/scroll-tech/go-ethereum/core/tracing"
 	"math/big"
 	"slices"
 	"sort"
@@ -129,6 +130,8 @@ type StateDB struct {
 	StorageUpdated int
 	AccountDeleted int
 	StorageDeleted int
+
+	hooks *tracing.Hooks
 }
 
 // New creates a new state from a given trie.
@@ -211,6 +214,9 @@ func (s *StateDB) AddLog(log *types.Log) {
 	log.TxHash = s.thash
 	log.TxIndex = uint(s.txIndex)
 	log.Index = s.logSize
+	if s.hooks != nil && s.hooks.OnLog != nil {
+		s.hooks.OnLog(log)
+	}
 	s.logs[s.thash] = append(s.logs[s.thash], log)
 	s.logSize++
 }
@@ -1029,6 +1035,10 @@ func (s *StateDB) clearJournalAndRefund() {
 
 // Commit writes the state to the underlying in-memory trie database.
 func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+	origin := s.originalRoot
+	if origin == (common.Hash{}) {
+		origin = types.EmptyRootHash
+	}
 	if s.dbErr != nil {
 		return common.Hash{}, fmt.Errorf("commit aborted due to earlier error: %v", s.dbErr)
 	}
@@ -1038,11 +1048,13 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	// Commit objects to the trie, measuring the elapsed time
 	var storageCommitted int
 	codeWriter := s.db.TrieDB().DiskDB().NewBatch()
+	codes := make(map[common.Hash][]byte)
 	for addr := range s.stateObjectsDirty {
 		if obj := s.stateObjects[addr]; !obj.deleted {
 			// Write any contract code associated with the state object
 			if obj.code != nil && obj.dirtyCode {
 				rawdb.WriteCode(codeWriter, common.BytesToHash(obj.KeccakCodeHash()), obj.code)
+				codes[common.BytesToHash(obj.KeccakCodeHash())] = obj.code
 				obj.dirtyCode = false
 			}
 			// Write any storage changes in the state object to its storage trie
@@ -1110,6 +1122,9 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 			if err := s.snaps.Cap(root, 128); err != nil {
 				log.Warn("Failed to cap snapshot tree", "root", root, "layers", 128, "err", err)
 			}
+		}
+		if s.hooks != nil && s.hooks.OnCommit != nil {
+			s.hooks.OnCommit(origin, root, s.snapDestructs, s.snapAccounts, s.snapStorage, codes)
 		}
 		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
 	}
@@ -1190,4 +1205,8 @@ func (s *StateDB) AddressInAccessList(addr common.Address) bool {
 // SlotInAccessList returns true if the given (address, slot)-tuple is in the access list.
 func (s *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressPresent bool, slotPresent bool) {
 	return s.accessList.Contains(addr, slot)
+}
+
+func (s *StateDB) SetHooks(hooks *tracing.Hooks) {
+	s.hooks = hooks
 }

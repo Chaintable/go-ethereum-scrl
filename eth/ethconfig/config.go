@@ -26,13 +26,12 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/scroll-tech/go-ethereum/consensus/wrapper"
-
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/consensus"
 	"github.com/scroll-tech/go-ethereum/consensus/clique"
 	"github.com/scroll-tech/go-ethereum/consensus/ethash"
 	"github.com/scroll-tech/go-ethereum/consensus/system_contract"
+	"github.com/scroll-tech/go-ethereum/consensus/wrapper"
 	"github.com/scroll-tech/go-ethereum/core"
 	"github.com/scroll-tech/go-ethereum/eth/downloader"
 	"github.com/scroll-tech/go-ethereum/eth/gasprice"
@@ -230,6 +229,8 @@ type Config struct {
 
 	// DA syncer options
 	DA da_syncer.Config
+
+	VMTraceCfg string
 }
 
 // CreateConsensusEngine creates a consensus engine for the given chain configuration.
