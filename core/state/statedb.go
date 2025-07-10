@@ -1120,6 +1120,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 			}
 			if s.hooks != nil && s.hooks.OnCommit != nil {
 				s.hooks.OnCommit(parent, root, s.snapDestructs, s.snapAccounts, s.snapStorage, codes)
+				log.Info("OnCommit", "parentRoot", parent.String(), "stateRoot", root.String())
 			}
 		}
 		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
