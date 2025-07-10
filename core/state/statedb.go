@@ -131,7 +131,10 @@ type StateDB struct {
 	AccountDeleted int
 	StorageDeleted int
 
-	hooks *tracing.Hooks
+	hooks     *tracing.Hooks
+	Destructs map[common.Hash]struct{}
+	Accounts  map[common.Hash][]byte
+	Storage   map[common.Hash]map[common.Hash][]byte
 }
 
 // New creates a new state from a given trie.
@@ -154,6 +157,9 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		accessList:          newAccessList(),
 		transientStorage:    newTransientStorage(),
 		hasher:              crypto.NewKeccakState(),
+		Destructs:           make(map[common.Hash]struct{}),
+		Accounts:            make(map[common.Hash][]byte),
+		Storage:             make(map[common.Hash]map[common.Hash][]byte),
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -552,6 +558,7 @@ func (s *StateDB) updateStateObject(obj *stateObject) {
 	if s.snap != nil {
 		s.snapAccounts[obj.addrHash] = snapshot.SlimAccountRLP(obj.data.Nonce, obj.data.Balance, obj.data.Root, obj.data.KeccakCodeHash, obj.data.PoseidonCodeHash, obj.data.CodeSize)
 	}
+	s.Accounts[obj.addrHash] = snapshot.SlimAccountRLP(obj.data.Nonce, obj.data.Balance, obj.data.Root, obj.data.KeccakCodeHash, obj.data.PoseidonCodeHash, obj.data.CodeSize)
 }
 
 // deleteStateObject removes the given object from the state trie.
@@ -671,6 +678,12 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) 
 		_, prevdestruct = s.snapDestructs[prev.addrHash]
 		if !prevdestruct {
 			s.snapDestructs[prev.addrHash] = struct{}{}
+		}
+	}
+	if prev != nil {
+		_, prevdestruct = s.Destructs[prev.addrHash]
+		if !prevdestruct {
+			s.Destructs[prev.addrHash] = struct{}{}
 		}
 	}
 	newobj = newObject(s, addr, types.StateAccount{})
@@ -834,6 +847,21 @@ func (s *StateDB) Copy() *StateDB {
 			state.snapStorage[k] = temp
 		}
 	}
+	for k, v := range s.Destructs {
+		state.Destructs[k] = v
+	}
+	state.Accounts = make(map[common.Hash][]byte)
+	for k, v := range s.Accounts {
+		state.Accounts[k] = v
+	}
+	state.Storage = make(map[common.Hash]map[common.Hash][]byte)
+	for k, v := range s.Storage {
+		temp := make(map[common.Hash][]byte)
+		for kk, vv := range v {
+			temp[kk] = vv
+		}
+		state.Storage[k] = temp
+	}
 	return state
 }
 
@@ -894,6 +922,9 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 				delete(s.snapAccounts, obj.addrHash)       // Clear out any previously updated account data (may be recreated via a ressurrect)
 				delete(s.snapStorage, obj.addrHash)        // Clear out any previously updated storage data (may be recreated via a ressurrect)
 			}
+			s.Destructs[obj.addrHash] = struct{}{}
+			delete(s.Accounts, obj.addrHash)
+			delete(s.Storage, obj.addrHash)
 		} else {
 			obj.finalise(true) // Prefetch slots in the background
 		}
@@ -1105,10 +1136,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 		s.AccountUpdated, s.AccountDeleted = 0, 0
 		s.StorageUpdated, s.StorageDeleted = 0, 0
 	}
-	if s.hooks != nil && s.hooks.OnCommit != nil {
-		s.hooks.OnCommit(originalRoot, root, s.snapDestructs, s.snapAccounts, s.snapStorage, codes)
-		log.Info("OnCommit", "parentRoot", originalRoot.String(), "stateRoot", root.String(), "snap exist", s.snap != nil)
-	}
 	// If snapshotting is enabled, update the snapshot tree with this new version
 	if s.snap != nil {
 		if metrics.EnabledExpensive {
@@ -1129,6 +1156,10 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 		}
 		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
 	}
+	if s.hooks != nil && s.hooks.OnCommit != nil {
+		s.hooks.OnCommit(originalRoot, root, s.Destructs, s.Accounts, s.Storage, codes)
+	}
+	s.Destructs, s.Accounts, s.Storage = nil, nil, nil
 	return root, err
 }
 
