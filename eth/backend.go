@@ -205,6 +205,7 @@ func New(stack *node.Node, config *ethconfig.Config, l1Client l1.Client) (*Ether
 		}
 	)
 
+	log.Info("vmtrace config", "config", vmConfig)
 	if len(config.VMTraceCfg) != 0 {
 		t, err := tracer.NewPipelineTracer(json.RawMessage(config.VMTraceCfg))
 		if err != nil {
