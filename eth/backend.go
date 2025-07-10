@@ -212,6 +212,7 @@ func New(stack *node.Node, config *ethconfig.Config, l1Client l1.Client) (*Ether
 			return nil, fmt.Errorf("failed to create tracer %s: %v", config.VMTraceCfg, err)
 		}
 		vmConfig.Tracer = t
+		vmConfig.Debug = true
 	}
 	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, chainConfig, eth.engine, vmConfig, eth.shouldPreserve, &config.TxLookupLimit)
 	if err != nil {
