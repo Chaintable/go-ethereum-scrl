@@ -1035,10 +1035,6 @@ func (s *StateDB) clearJournalAndRefund() {
 
 // Commit writes the state to the underlying in-memory trie database.
 func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	origin := s.originalRoot
-	if origin == (common.Hash{}) {
-		origin = types.EmptyRootHash
-	}
 	if s.dbErr != nil {
 		return common.Hash{}, fmt.Errorf("commit aborted due to earlier error: %v", s.dbErr)
 	}
@@ -1122,9 +1118,9 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 			if err := s.snaps.Cap(root, 128); err != nil {
 				log.Warn("Failed to cap snapshot tree", "root", root, "layers", 128, "err", err)
 			}
-		}
-		if s.hooks != nil && s.hooks.OnCommit != nil {
-			s.hooks.OnCommit(origin, root, s.snapDestructs, s.snapAccounts, s.snapStorage, codes)
+			if s.hooks != nil && s.hooks.OnCommit != nil {
+				s.hooks.OnCommit(parent, root, s.snapDestructs, s.snapAccounts, s.snapStorage, codes)
+			}
 		}
 		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
 	}
