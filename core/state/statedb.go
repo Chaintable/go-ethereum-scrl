@@ -1035,6 +1035,10 @@ func (s *StateDB) clearJournalAndRefund() {
 
 // Commit writes the state to the underlying in-memory trie database.
 func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+	originalRoot := s.originalRoot
+	if originalRoot == (common.Hash{}) {
+		originalRoot = types.EmptyRootHash
+	}
 	if s.dbErr != nil {
 		return common.Hash{}, fmt.Errorf("commit aborted due to earlier error: %v", s.dbErr)
 	}
@@ -1101,6 +1105,10 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 		s.AccountUpdated, s.AccountDeleted = 0, 0
 		s.StorageUpdated, s.StorageDeleted = 0, 0
 	}
+	if s.hooks != nil && s.hooks.OnCommit != nil {
+		s.hooks.OnCommit(originalRoot, root, s.snapDestructs, s.snapAccounts, s.snapStorage, codes)
+		log.Info("OnCommit", "parentRoot", originalRoot.String(), "stateRoot", root.String(), "snap exist", s.snap != nil)
+	}
 	// If snapshotting is enabled, update the snapshot tree with this new version
 	if s.snap != nil {
 		if metrics.EnabledExpensive {
@@ -1117,10 +1125,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 			// - head-127 layer(bottom-most diff layer) is paired with HEAD-127 state
 			if err := s.snaps.Cap(root, 128); err != nil {
 				log.Warn("Failed to cap snapshot tree", "root", root, "layers", 128, "err", err)
-			}
-			if s.hooks != nil && s.hooks.OnCommit != nil {
-				s.hooks.OnCommit(parent, root, s.snapDestructs, s.snapAccounts, s.snapStorage, codes)
-				log.Info("OnCommit", "parentRoot", parent.String(), "stateRoot", root.String())
 			}
 		}
 		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
