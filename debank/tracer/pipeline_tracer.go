@@ -300,6 +300,7 @@ func (t *PipelineTracer) OnCommit(originRoot common.Hash, root common.Hash, dest
 			handleError(err)
 			return
 		}
+		log.Info("Upload diff", "number", BlockCtx.BlockNumber, "stateRoot", root.String())
 	}()
 
 	// 上传 block file
