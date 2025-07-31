@@ -179,7 +179,6 @@ func (t *callTracer) CaptureStateAfter(pc uint64, op vm.OpCode, gas, cost uint64
 }
 
 func (t *callTracer) CaptureStart(env *vm.EVM, from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int, authorizationResults []types.AuthorizationResult) {
-	log.Info("CaptureStart")
 	toCopy := to
 	callType := vm.CALL
 	if create {
@@ -197,7 +196,6 @@ func (t *callTracer) CaptureStart(env *vm.EVM, from common.Address, to common.Ad
 }
 
 func (t *callTracer) CaptureEnd(output []byte, gasUsed uint64, ti time.Duration, err error) {
-	log.Info("CaptureEnd")
 	if len(t.callstack) != 1 {
 		return
 	}
@@ -206,7 +204,6 @@ func (t *callTracer) CaptureEnd(output []byte, gasUsed uint64, ti time.Duration,
 }
 
 func (t *callTracer) CaptureEnter(typ vm.OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int) {
-	log.Info("CaptureEnter")
 	toCopy := to
 	call := callFrame{
 		Type:  vm.OpCode(typ),
@@ -220,7 +217,6 @@ func (t *callTracer) CaptureEnter(typ vm.OpCode, from common.Address, to common.
 }
 
 func (t *callTracer) CaptureExit(output []byte, usedGas uint64, err error) {
-	log.Info("CaptureExit")
 	size := len(t.callstack)
 	if size <= 1 {
 		return
@@ -254,6 +250,9 @@ func (t *callTracer) OnTxStart(tx *types.Transaction, from common.Address) {
 func (t *callTracer) OnTxEnd(receipt *types.Receipt, err error) {
 	// Error happened during tx validation.
 	if err != nil {
+		return
+	}
+	if len(t.callstack) == 0 {
 		return
 	}
 	setParentFailed(&t.callstack[0], false)
