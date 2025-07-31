@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/scroll-tech/go-ethereum/log"
 	"math/big"
 	"strings"
 	"sync/atomic"
