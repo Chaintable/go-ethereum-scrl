@@ -65,6 +65,7 @@ func (t *PipelineTracer) OnClose() {
 }
 
 func (t *PipelineTracer) OnBlockStart(block *types.Block) {
+	log.Info("OnBlockStart", "blockNumber", block.Number())
 	BlockCtx = &ExtraInfo{
 		BlockNumber: block.NumberU64(),
 		BlockHash:   block.Hash(),
