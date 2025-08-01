@@ -254,9 +254,7 @@ func (t *PipelineTracer) OnGenesisBlock(block *types.Block, alloc types.GenesisA
 }
 
 func (t *PipelineTracer) OnCommit(originRoot common.Hash, root common.Hash, destructs map[common.Hash]struct{}, accounts map[common.Hash][]byte, storages map[common.Hash]map[common.Hash][]byte, codes map[common.Hash][]byte) {
-	if BlockCtx.BlockNumber == 14785107 || originRoot.String() == "0x6ab5b42d608fb6b1994b67f176f6c3a2b003cdceb278f33535bcc13e028b210d" || root.String() == "0x6ab5b42d608fb6b1994b67f176f6c3a2b003cdceb278f33535bcc13e028b210d" {
-		log.Info("OnCommit", "blockNumber", BlockCtx.BlockNumber, "originRoot", originRoot.Hex(), "root", root.Hex())
-	}
+	log.Info("OnCommit", "blockNumber", BlockCtx.BlockNumber, "originRoot", originRoot.Hex(), "root", root.Hex())
 	if originRoot != root {
 		BlockCtx.BlockDiff = stateUpdateToStateDiff(originRoot, root, destructs, accounts, storages, codes)
 	} else {
