@@ -65,6 +65,7 @@ func (t *PipelineTracer) OnClose() {
 }
 
 func (t *PipelineTracer) OnBlockStart(block *types.Block) {
+	log.Info("OnBlockEnd", "block", block)
 	BlockCtx = &ExtraInfo{
 		BlockNumber: block.NumberU64(),
 		BlockHash:   block.Hash(),
@@ -88,6 +89,7 @@ func (t *PipelineTracer) OnBlockStart(block *types.Block) {
 }
 
 func (t *PipelineTracer) OnBlockEnd(blockErr error) {
+	log.Info("OnBlockEnd", "err", blockErr)
 	// empty block process
 	if !BlockCtx.Committed {
 		t.OnCommit(BlockCtx.BlockHeader.StateRoot, BlockCtx.BlockHeader.StateRoot, nil, nil, nil, nil)
