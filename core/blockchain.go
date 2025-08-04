@@ -1904,6 +1904,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 }
 
 func (bc *BlockChain) BuildAndWriteBlock(parentBlock *types.Block, header *types.Header, txs types.Transactions, sign bool) (*types.Block, WriteStatus, error) {
+	log.Info("buildAndWriteBlock", "blockNumber", header.Number, "hash", header.Hash().String(), "parentRoot", parentBlock.Root().String())
 	if !bc.chainmu.TryLock() {
 		return nil, NonStatTy, errInsertionInterrupted
 	}
