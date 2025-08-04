@@ -1799,11 +1799,26 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 
 		// Process block using the parent state as reference point
 		log.Info("insertChain new block", "blockNumber", block.Number(), "hash", block.Hash().String(), "parentRoot", parent.Root.String())
+		var pipelineTracer *tracer.PipelineTracer
+		if bc.vmConfig.Tracer != nil {
+			if p, ok := bc.vmConfig.Tracer.(*tracer.PipelineTracer); !ok {
+				log.Crit("vmConfig.Tracer must be a pipeline.Tracer")
+			} else {
+				pipelineTracer = p
+			}
+		}
+		if pipelineTracer != nil {
+			pipelineTracer.OnBlockStart(block)
+			statedb.SetHooks(tracing.BuildHooks(pipelineTracer))
+		}
 		substart := time.Now()
 		receipts, logs, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			atomic.StoreUint32(&followupInterrupt, 1)
+			if pipelineTracer != nil {
+				pipelineTracer.OnBlockEnd(err)
+			}
 			return it.index, err
 		}
 
@@ -1842,6 +1857,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 		atomic.StoreUint32(&followupInterrupt, 1)
 		if err != nil {
 			return it.index, err
+		}
+		if pipelineTracer != nil {
+			pipelineTracer.OnBlockEnd(nil)
 		}
 		// Update the metrics touched during block commit
 		accountCommitTimer.Update(statedb.AccountCommits)   // Account commits are complete, we can mark them
