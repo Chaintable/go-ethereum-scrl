@@ -135,6 +135,7 @@ type StateDB struct {
 	Destructs map[common.Hash]struct{}
 	Accounts  map[common.Hash][]byte
 	Storage   map[common.Hash]map[common.Hash][]byte
+	diskRoot  *common.Hash
 }
 
 // New creates a new state from a given trie.
@@ -1157,7 +1158,12 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
 	}
 	if s.hooks != nil && s.hooks.OnCommit != nil {
-		s.hooks.OnCommit(originalRoot, root, s.Destructs, s.Accounts, s.Storage, codes)
+		commitRoot := root
+		if s.diskRoot != nil {
+			commitRoot = *s.diskRoot
+			log.Info("Use disk root as commit root", "stateRoot", root, "diskRoot", *s.diskRoot)
+		}
+		s.hooks.OnCommit(originalRoot, commitRoot, s.Destructs, s.Accounts, s.Storage, codes)
 	}
 	s.Destructs, s.Accounts, s.Storage = nil, nil, nil
 	return root, err
@@ -1241,4 +1247,12 @@ func (s *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addre
 
 func (s *StateDB) SetHooks(hooks *tracing.Hooks) {
 	s.hooks = hooks
+}
+
+func (s *StateDB) SetDiskRoot(diskRoot common.Hash) {
+	s.diskRoot = &diskRoot
+}
+
+func (s *StateDB) GetDistRoot() *common.Hash {
+	return s.diskRoot
 }

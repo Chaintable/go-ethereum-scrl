@@ -26,7 +26,6 @@ import (
 	"github.com/scroll-tech/go-ethereum/consensus"
 	"github.com/scroll-tech/go-ethereum/consensus/misc"
 	"github.com/scroll-tech/go-ethereum/core/state"
-	"github.com/scroll-tech/go-ethereum/core/tracing"
 	"github.com/scroll-tech/go-ethereum/core/types"
 	"github.com/scroll-tech/go-ethereum/core/vm"
 	"github.com/scroll-tech/go-ethereum/crypto"
@@ -84,15 +83,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 			pipelineTracer = p
 		}
 	}
-	if pipelineTracer != nil {
-		pipelineTracer.OnBlockStart(block)
-		statedb.SetHooks(tracing.BuildHooks(pipelineTracer))
-	}
-	defer func() {
-		if pipelineTracer != nil {
-			pipelineTracer.OnBlockEnd(err)
-		}
-	}()
 	var (
 		usedGas     = new(uint64)
 		header      = block.Header()

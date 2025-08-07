@@ -1407,6 +1407,10 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	if err := blockBatch.Write(); err != nil {
 		log.Crit("Failed to write block into disk", "err", err)
 	}
+	shouldValidateStateRoot := bc.Config().Scroll.UseZktrie != bc.Config().IsEuclid(block.Time())
+	if !shouldValidateStateRoot {
+		state.SetDiskRoot(block.Root())
+	}
 	// Commit all cached state changes into underlying memory database.
 	root, err := state.Commit(bc.chainConfig.IsEIP158(block.Number()))
 	if err != nil {
@@ -1798,11 +1802,27 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 		}
 
 		// Process block using the parent state as reference point
+		log.Info("insertChain new block", "blockNumber", block.Number(), "hash", block.Hash().String(), "parentRoot", parent.Root.String())
+		var pipelineTracer *tracer.PipelineTracer
+		if bc.vmConfig.Tracer != nil {
+			if p, ok := bc.vmConfig.Tracer.(*tracer.PipelineTracer); !ok {
+				log.Crit("vmConfig.Tracer must be a pipeline.Tracer")
+			} else {
+				pipelineTracer = p
+			}
+		}
+		if pipelineTracer != nil {
+			pipelineTracer.OnBlockStart(block)
+			statedb.SetHooks(tracing.BuildHooks(pipelineTracer))
+		}
 		substart := time.Now()
 		receipts, logs, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			atomic.StoreUint32(&followupInterrupt, 1)
+			if pipelineTracer != nil {
+				pipelineTracer.OnBlockEnd(err)
+			}
 			return it.index, err
 		}
 
@@ -1841,6 +1861,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 		atomic.StoreUint32(&followupInterrupt, 1)
 		if err != nil {
 			return it.index, err
+		}
+		if pipelineTracer != nil {
+			pipelineTracer.OnBlockEnd(nil)
 		}
 		// Update the metrics touched during block commit
 		accountCommitTimer.Update(statedb.AccountCommits)   // Account commits are complete, we can mark them
@@ -1903,6 +1926,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 }
 
 func (bc *BlockChain) BuildAndWriteBlock(parentBlock *types.Block, header *types.Header, txs types.Transactions, sign bool) (*types.Block, WriteStatus, error) {
+	log.Info("buildAndWriteBlock", "blockNumber", header.Number, "hash", header.Hash().String(), "parentRoot", parentBlock.Root().String())
 	if !bc.chainmu.TryLock() {
 		return nil, NonStatTy, errInsertionInterrupted
 	}
