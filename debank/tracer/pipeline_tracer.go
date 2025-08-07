@@ -65,7 +65,6 @@ func (t *PipelineTracer) OnClose() {
 }
 
 func (t *PipelineTracer) OnBlockStart(block *types.Block) {
-	log.Info("OnBlockStart", "block", block)
 	BlockCtx = &ExtraInfo{
 		BlockNumber: block.NumberU64(),
 		BlockHash:   block.Hash(),
@@ -89,7 +88,6 @@ func (t *PipelineTracer) OnBlockStart(block *types.Block) {
 }
 
 func (t *PipelineTracer) OnBlockEnd(blockErr error) {
-	log.Info("OnBlockEnd", "err", blockErr)
 	// empty block process
 	if !BlockCtx.Committed {
 		t.OnCommit(BlockCtx.BlockHeader.StateRoot, BlockCtx.BlockHeader.StateRoot, nil, nil, nil, nil)
@@ -256,7 +254,6 @@ func (t *PipelineTracer) OnGenesisBlock(block *types.Block, alloc types.GenesisA
 }
 
 func (t *PipelineTracer) OnCommit(originRoot common.Hash, root common.Hash, destructs map[common.Hash]struct{}, accounts map[common.Hash][]byte, storages map[common.Hash]map[common.Hash][]byte, codes map[common.Hash][]byte) {
-	log.Info("OnCommit", "blockNumber", BlockCtx.BlockNumber, "originRoot", originRoot.Hex(), "root", root.Hex())
 	if originRoot != root {
 		BlockCtx.BlockDiff = stateUpdateToStateDiff(originRoot, root, destructs, accounts, storages, codes)
 	} else {

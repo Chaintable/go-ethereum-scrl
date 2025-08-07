@@ -980,7 +980,6 @@ func (w *worker) commit() (common.Hash, error) {
 	// We may end up trying to process txns that we already included in the previous block, but they will all fail the nonce check
 	w.eth.TxPool().PauseReorgs()
 
-	log.Info("worker commit", "blockNumber", block.Number(), "hash", block.Hash().String(), "stateRoot", block.Root().String())
 	// Commit block and state to database.
 	_, err = w.chain.WriteBlockWithState(block, w.current.receipts, w.current.coalescedLogs, w.current.state, true)
 	if err != nil {
