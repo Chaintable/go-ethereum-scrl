@@ -19,6 +19,7 @@ package eth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -44,6 +45,7 @@ import (
 	"github.com/scroll-tech/go-ethereum/core/state/pruner"
 	"github.com/scroll-tech/go-ethereum/core/types"
 	"github.com/scroll-tech/go-ethereum/core/vm"
+	"github.com/scroll-tech/go-ethereum/debank/tracer"
 	"github.com/scroll-tech/go-ethereum/eth/downloader"
 	"github.com/scroll-tech/go-ethereum/eth/ethconfig"
 	"github.com/scroll-tech/go-ethereum/eth/filters"
@@ -209,6 +211,16 @@ func New(stack *node.Node, config *ethconfig.Config, l1Client l1.Client) (*Ether
 			Preimages:           config.Preimages,
 		}
 	)
+
+	log.Info("vmtrace config", "config", config.VMTraceCfg)
+	if len(config.VMTraceCfg) != 0 {
+		t, err := tracer.NewPipelineTracer(json.RawMessage(config.VMTraceCfg))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create tracer %s: %v", config.VMTraceCfg, err)
+		}
+		vmConfig.Tracer = t
+		vmConfig.Debug = true
+	}
 	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, chainConfig, eth.engine, vmConfig, eth.shouldPreserve, &config.TxLookupLimit)
 	if err != nil {
 		return nil, err

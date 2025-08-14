@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/scroll-tech/go-ethereum/core/tracing"
 	"math/big"
 	"slices"
 	"sort"
@@ -129,6 +130,12 @@ type StateDB struct {
 	StorageUpdated int
 	AccountDeleted int
 	StorageDeleted int
+
+	hooks     *tracing.Hooks
+	Destructs map[common.Hash]struct{}
+	Accounts  map[common.Hash][]byte
+	Storage   map[common.Hash]map[common.Hash][]byte
+	diskRoot  *common.Hash
 }
 
 // New creates a new state from a given trie.
@@ -151,6 +158,9 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		accessList:          newAccessList(),
 		transientStorage:    newTransientStorage(),
 		hasher:              crypto.NewKeccakState(),
+		Destructs:           make(map[common.Hash]struct{}),
+		Accounts:            make(map[common.Hash][]byte),
+		Storage:             make(map[common.Hash]map[common.Hash][]byte),
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -216,6 +226,9 @@ func (s *StateDB) AddLog(log *types.Log) {
 	log.TxHash = s.thash
 	log.TxIndex = uint(s.txIndex)
 	log.Index = s.logSize
+	if s.hooks != nil && s.hooks.OnLog != nil {
+		s.hooks.OnLog(log)
+	}
 	s.logs[s.thash] = append(s.logs[s.thash], log)
 	s.logSize++
 }
@@ -551,6 +564,7 @@ func (s *StateDB) updateStateObject(obj *stateObject) {
 	if s.snap != nil {
 		s.snapAccounts[obj.addrHash] = snapshot.SlimAccountRLP(obj.data.Nonce, obj.data.Balance, obj.data.Root, obj.data.KeccakCodeHash, obj.data.PoseidonCodeHash, obj.data.CodeSize)
 	}
+	s.Accounts[obj.addrHash] = snapshot.SlimAccountRLP(obj.data.Nonce, obj.data.Balance, obj.data.Root, obj.data.KeccakCodeHash, obj.data.PoseidonCodeHash, obj.data.CodeSize)
 }
 
 // deleteStateObject removes the given object from the state trie.
@@ -670,6 +684,12 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) 
 		_, prevdestruct = s.snapDestructs[prev.addrHash]
 		if !prevdestruct {
 			s.snapDestructs[prev.addrHash] = struct{}{}
+		}
+	}
+	if prev != nil {
+		_, prevdestruct = s.Destructs[prev.addrHash]
+		if !prevdestruct {
+			s.Destructs[prev.addrHash] = struct{}{}
 		}
 	}
 	newobj = newObject(s, addr, types.StateAccount{})
@@ -833,6 +853,21 @@ func (s *StateDB) Copy() *StateDB {
 			state.snapStorage[k] = temp
 		}
 	}
+	for k, v := range s.Destructs {
+		state.Destructs[k] = v
+	}
+	state.Accounts = make(map[common.Hash][]byte)
+	for k, v := range s.Accounts {
+		state.Accounts[k] = v
+	}
+	state.Storage = make(map[common.Hash]map[common.Hash][]byte)
+	for k, v := range s.Storage {
+		temp := make(map[common.Hash][]byte)
+		for kk, vv := range v {
+			temp[kk] = vv
+		}
+		state.Storage[k] = temp
+	}
 	return state
 }
 
@@ -893,6 +928,9 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 				delete(s.snapAccounts, obj.addrHash)       // Clear out any previously updated account data (may be recreated via a ressurrect)
 				delete(s.snapStorage, obj.addrHash)        // Clear out any previously updated storage data (may be recreated via a ressurrect)
 			}
+			s.Destructs[obj.addrHash] = struct{}{}
+			delete(s.Accounts, obj.addrHash)
+			delete(s.Storage, obj.addrHash)
 		} else {
 			obj.finalise(true) // Prefetch slots in the background
 		}
@@ -1034,6 +1072,10 @@ func (s *StateDB) clearJournalAndRefund() {
 
 // Commit writes the state to the underlying in-memory trie database.
 func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+	originalRoot := s.originalRoot
+	if originalRoot == (common.Hash{}) {
+		originalRoot = types.EmptyRootHash
+	}
 	if s.dbErr != nil {
 		return common.Hash{}, fmt.Errorf("commit aborted due to earlier error: %v", s.dbErr)
 	}
@@ -1043,11 +1085,13 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	// Commit objects to the trie, measuring the elapsed time
 	var storageCommitted int
 	codeWriter := s.db.TrieDB().DiskDB().NewBatch()
+	codes := make(map[common.Hash][]byte)
 	for addr := range s.stateObjectsDirty {
 		if obj := s.stateObjects[addr]; !obj.deleted {
 			// Write any contract code associated with the state object
 			if obj.code != nil && obj.dirtyCode {
 				rawdb.WriteCode(codeWriter, common.BytesToHash(obj.KeccakCodeHash()), obj.code)
+				codes[common.BytesToHash(obj.KeccakCodeHash())] = obj.code
 				obj.dirtyCode = false
 			}
 			// Write any storage changes in the state object to its storage trie
@@ -1118,6 +1162,15 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 		}
 		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
 	}
+	if s.hooks != nil && s.hooks.OnCommit != nil {
+		commitRoot := root
+		if s.diskRoot != nil {
+			commitRoot = *s.diskRoot
+			log.Info("Use disk root as commit root", "stateRoot", root, "diskRoot", *s.diskRoot)
+		}
+		s.hooks.OnCommit(originalRoot, commitRoot, s.Destructs, s.Accounts, s.Storage, codes)
+	}
+	s.Destructs, s.Accounts, s.Storage = nil, nil, nil
 	return root, err
 }
 
@@ -1195,4 +1248,16 @@ func (s *StateDB) AddressInAccessList(addr common.Address) bool {
 // SlotInAccessList returns true if the given (address, slot)-tuple is in the access list.
 func (s *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressPresent bool, slotPresent bool) {
 	return s.accessList.Contains(addr, slot)
+}
+
+func (s *StateDB) SetHooks(hooks *tracing.Hooks) {
+	s.hooks = hooks
+}
+
+func (s *StateDB) SetDiskRoot(diskRoot common.Hash) {
+	s.diskRoot = &diskRoot
+}
+
+func (s *StateDB) GetDistRoot() *common.Hash {
+	return s.diskRoot
 }
