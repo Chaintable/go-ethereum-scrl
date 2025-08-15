@@ -93,6 +93,12 @@ type handlerConfig struct {
 	Checkpoint        *params.TrustedCheckpoint // Hard coded checkpoint for sync challenges
 	Whitelist         map[uint64]common.Hash    // Hard coded whitelist for sync challenged
 	ShadowForkPeerIDs []string                  // List of peer ids that take part in the shadow-fork
+
+	// Gossip configs
+	DisableTxBroadcast   bool
+	DisableTxReceiving   bool
+	EnableBroadcastToAll bool
+	BroadcastToAllCap    int
 }
 
 type handler struct {
@@ -131,7 +137,11 @@ type handler struct {
 	wg        sync.WaitGroup
 	peerWG    sync.WaitGroup
 
-	shadowForkPeerIDs []string
+	shadowForkPeerIDs    []string
+	disableTxBroadcast   bool
+	disableTxReceiving   bool
+	enableBroadcastToAll bool
+	broadcastToAllCap    int
 }
 
 // newHandler returns a handler for all Ethereum chain management protocol.
@@ -141,16 +151,20 @@ func newHandler(config *handlerConfig) (*handler, error) {
 		config.EventMux = new(event.TypeMux) // Nicety initialization for tests
 	}
 	h := &handler{
-		networkID:         config.Network,
-		forkFilter:        forkid.NewFilter(config.Chain),
-		eventMux:          config.EventMux,
-		database:          config.Database,
-		txpool:            config.TxPool,
-		chain:             config.Chain,
-		peers:             newPeerSet(),
-		whitelist:         config.Whitelist,
-		quitSync:          make(chan struct{}),
-		shadowForkPeerIDs: config.ShadowForkPeerIDs,
+		networkID:            config.Network,
+		forkFilter:           forkid.NewFilter(config.Chain),
+		eventMux:             config.EventMux,
+		database:             config.Database,
+		txpool:               config.TxPool,
+		chain:                config.Chain,
+		peers:                newPeerSet(),
+		whitelist:            config.Whitelist,
+		quitSync:             make(chan struct{}),
+		shadowForkPeerIDs:    config.ShadowForkPeerIDs,
+		disableTxBroadcast:   config.DisableTxBroadcast,
+		disableTxReceiving:   config.DisableTxReceiving,
+		enableBroadcastToAll: config.EnableBroadcastToAll,
+		broadcastToAllCap:    config.BroadcastToAllCap,
 	}
 	if config.Sync == downloader.FullSync {
 		// The database seems empty as the current block is the genesis. Yet the fast
@@ -415,10 +429,12 @@ func (h *handler) Start(maxPeers int) {
 	h.maxPeers = maxPeers
 
 	// broadcast transactions
-	h.wg.Add(1)
-	h.txsCh = make(chan core.NewTxsEvent, txChanSize)
-	h.txsSub = h.txpool.SubscribeNewTxsEvent(h.txsCh)
-	go h.txBroadcastLoop()
+	if !h.disableTxBroadcast {
+		h.wg.Add(1)
+		h.txsCh = make(chan core.NewTxsEvent, txChanSize)
+		h.txsSub = h.txpool.SubscribeNewTxsEvent(h.txsCh)
+		go h.txBroadcastLoop()
+	}
 
 	// broadcast mined blocks
 	h.wg.Add(1)
@@ -468,7 +484,12 @@ func (h *handler) BroadcastBlock(block *types.Block, propagate bool) {
 			return
 		}
 		// Send the block to a subset of our peers
-		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
+		numDirect := int(math.Sqrt(float64(len(peers))))
+		// If enableBroadcastToAll is true, broadcast blocks directly to all peers (capped at broadcastToAllCap).
+		if h.enableBroadcastToAll {
+			numDirect = min(h.broadcastToAllCap, len(peers))
+		}
+		transfer := peers[:numDirect]
 		for _, peer := range transfer {
 			peer.AsyncSendNewBlock(block, td)
 		}
@@ -509,6 +530,10 @@ func (h *handler) BroadcastTransactions(txs types.Transactions) {
 		peers := onlyShadowForkPeers(h.shadowForkPeerIDs, h.peers.peersWithoutTransaction(tx.Hash()))
 		// Send the tx unconditionally to a subset of our peers
 		numDirect := int(math.Sqrt(float64(len(peers))))
+		// If enableBroadcastToAll is true, broadcast transactions directly to all peers (capped at broadcastToAllCap).
+		if h.enableBroadcastToAll {
+			numDirect = min(h.broadcastToAllCap, len(peers))
+		}
 		for _, peer := range peers[:numDirect] {
 			txset[peer] = append(txset[peer], tx.Hash())
 		}
