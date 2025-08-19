@@ -11,6 +11,8 @@ var (
 
 	LatestUploadedBlockNumber = metrics.NewRegisteredGauge("pipeline/latest_uploaded_block_number", nil)
 
+	NodeInfo = metrics.NewRegisteredGaugeInfo("pipeline/node_info", nil)
+
 	BlockProcessTimer = metrics.NewRegisteredResettingTimer("pipeline/block_process", nil)
 
 	BlockTxExecutionTimer = metrics.NewRegisteredResettingTimer("pipeline/tx_execution", nil)
