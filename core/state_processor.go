@@ -123,12 +123,12 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 			pipelineTracer.OnTxStart(tx, msg.From())
 		}
 		receipt, err := applyTransaction(msg, p.config, p.bc, nil, gp, statedb, blockNumber, blockTime, blockHash, tx, usedGas, vmenv)
+		if err != nil {
+			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
+		}
 		if pipelineTracer != nil {
 			receipt.SetEffectiveGasPrice(tx, vmenv.Context.BaseFee)
 			pipelineTracer.OnTxEnd(receipt, err)
-		}
-		if err != nil {
-			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
 		}
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
