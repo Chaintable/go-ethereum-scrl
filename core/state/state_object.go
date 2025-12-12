@@ -341,6 +341,7 @@ func (s *stateObject) updateTrie(db Database) Trie {
 	}
 	// The snapshot storage map for the object
 	var storage map[common.Hash][]byte
+	var flatstorage map[common.Hash][]byte
 	// Insert all the pending updates into the trie
 	tr := s.getTrie(db)
 	hasher := s.db.hasher
@@ -386,6 +387,16 @@ func (s *stateObject) updateTrie(db Database) Trie {
 				}
 			}
 			storage[crypto.HashData(hasher, key[:])] = v // v will be nil if it's deleted
+		}
+		{
+			if flatstorage == nil {
+				// Retrieve the old storage map, if available, create a new one otherwise
+				if flatstorage = s.db.Storage[s.addrHash]; flatstorage == nil {
+					flatstorage = make(map[common.Hash][]byte)
+					s.db.Storage[s.addrHash] = storage
+				}
+			}
+			flatstorage[crypto.HashData(hasher, key[:])] = v // v will be nil if it's deleted
 		}
 		usedStorage = append(usedStorage, common.CopyBytes(key[:])) // Copy needed for closure
 	}

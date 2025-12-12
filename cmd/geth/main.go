@@ -194,6 +194,7 @@ var (
 		utils.DARecoverySignBlocksFlag,
 		utils.DARecoveryL2EndBlockFlag,
 		utils.DARecoveryProduceBlocksFlag,
+		utils.VMTraceJsonConfigFlag,
 	}
 
 	rpcFlags = []cli.Flag{

@@ -970,6 +970,12 @@ var (
 		Name:  "da.recovery.produceblocks",
 		Usage: "Produce unsigned blocks after L1 recovery for permissionless batch submission",
 	}
+
+	VMTraceJsonConfigFlag = &cli.StringFlag{
+		Name:  "vmtrace.jsonconfig",
+		Usage: "Tracer configuration (JSON)",
+		Value: "{}",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -2093,6 +2099,12 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	if cfg.NetworkId == 534351 {
 		log.Warn("Using legacy db prefix for L1 messages")
 		rawdb.SetL1MessageLegacyPrefix()
+	}
+
+	if ctx.IsSet(VMTraceJsonConfigFlag.Name) {
+		if vmTraceCfg := ctx.String(VMTraceJsonConfigFlag.Name); vmTraceCfg != "" {
+			cfg.VMTraceCfg = vmTraceCfg
+		}
 	}
 }
 
