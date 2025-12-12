@@ -562,6 +562,9 @@ func (w *worker) newWork(now time.Time, parent *types.Block, reorging bool, reor
 		// system contract with relaxed period uses time.Now() as the header.Time, calculate the deadline
 		deadline = time.Unix(int64(header.Time+w.chainConfig.SystemContract.Period), 0)
 	}
+	if w.chainConfig.SystemContract != nil && w.chainConfig.SystemContract.Period == 1 {
+		deadline = CalculateBlockDeadline(w.chainConfig.SystemContract, header)
+	}
 
 	w.current = &work{
 		deadlineTimer:  time.NewTimer(time.Until(deadline)),
@@ -627,18 +630,10 @@ func (w *worker) tryCommitNewWork(now time.Time, parentHash common.Hash, reorgin
 
 // handleForks
 func (w *worker) handleForks(parent *types.Block) (bool, error) {
-	// Apply Curie predeployed contract update
-	if w.chainConfig.CurieBlock != nil && w.chainConfig.CurieBlock.Cmp(w.current.header.Number) == 0 {
-		misc.ApplyCurieHardFork(w.current.state)
-		return true, nil
-	}
+	// Apply Scroll hard fork state transitions on state
+	misc.ApplyForkStateTransitions(w.chainConfig, w.current.state, w.current.header.Number.Uint64(), w.current.header.Time, parent.Time())
 
-	// Apply Feynman hard fork
-	if w.chainConfig.IsFeynmanTransitionBlock(w.current.header.Time, parent.Time()) {
-		misc.ApplyFeynmanHardFork(w.current.state)
-	}
-
-	// Apply EIP-2935
+	// Apply EIP-2935: Insert parent hash in history contract.
 	if w.chainConfig.IsFeynman(w.current.header.Time) {
 		context := core.NewEVMBlockContext(w.current.header, w.chain, w.chainConfig, nil)
 		vmenv := vm.NewEVM(context, vm.TxContext{}, w.current.state, w.chainConfig, vm.Config{})
@@ -1180,4 +1175,24 @@ func (w *worker) handleReorg(trigger *reorgTrigger) error {
 
 func (w *worker) isCanonical(header *types.Header) bool {
 	return w.chain.GetBlockByNumber(header.Number.Uint64()).Hash() == header.Hash()
+}
+
+// CalculateBlockDeadline calculates the deadline for block production based on
+// SystemContract configuration and current header information.
+// This function abstracts the deadline calculation logic for easier testing.
+func CalculateBlockDeadline(config *params.SystemContractConfig, header *types.Header) time.Time {
+	blocksPerSecond := system_contract.CalcBlocksPerSecond(config.BlocksPerSecond)
+	periodMs := system_contract.CalcPeriodMs(blocksPerSecond)
+
+	// Calculate the actual timing based on block number within the current period
+	blockIndex := header.Number.Uint64() % blocksPerSecond
+
+	// Calculate base time and add the fraction based on block index within the period
+	baseTimeNano := int64(header.Time) * int64(time.Second)
+	fractionNano := int64(blockIndex) * int64(periodMs) * int64(time.Millisecond)
+
+	// Add one period to determine the deadline
+	nextBlockNano := baseTimeNano + fractionNano + int64(periodMs)*int64(time.Millisecond)
+
+	return time.Unix(0, nextBlockNano)
 }
