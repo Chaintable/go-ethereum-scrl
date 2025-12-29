@@ -2600,7 +2600,7 @@ func (bc *BlockChain) pushBlockChange(block *types.Block) {
 		parent := bc.GetHeaderByHash(block.Header().ParentHash)
 
 		if parent.Root == block.Root() {
-			bc.logger.OnCommit(parent.Root, block.Root(), nil, nil, nil, nil)
+			bc.logger.OnCommit(parent.Root, block.Root(), nil, nil, nil, nil, nil, nil)
 		}
 
 		if blockChange != nil {
