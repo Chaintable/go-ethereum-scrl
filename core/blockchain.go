@@ -29,10 +29,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Chaintable/pipeline/tracer"
+	ptypes "github.com/Chaintable/pipeline/types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/scroll-tech/go-ethereum/core/tracing"
-	"github.com/scroll-tech/go-ethereum/debank/tracer"
-	ptypes "github.com/scroll-tech/go-ethereum/debank/types"
 
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/common/mclock"
