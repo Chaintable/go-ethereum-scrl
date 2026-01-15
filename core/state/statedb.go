@@ -21,11 +21,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/scroll-tech/go-ethereum/core/tracing"
 	"math/big"
 	"slices"
 	"sort"
 	"time"
+
+	"github.com/scroll-tech/go-ethereum/core/tracing"
 
 	zkt "github.com/scroll-tech/zktrie/types"
 
@@ -1168,7 +1169,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 			commitRoot = *s.diskRoot
 			log.Info("Use disk root as commit root", "stateRoot", root, "diskRoot", *s.diskRoot)
 		}
-		s.hooks.OnCommit(originalRoot, commitRoot, s.Destructs, s.Accounts, s.Storage, codes)
+		s.hooks.OnCommit(originalRoot, commitRoot, s.Destructs, s.Accounts, nil, s.Storage, nil, codes)
 	}
 	s.Destructs, s.Accounts, s.Storage = nil, nil, nil
 	return root, err

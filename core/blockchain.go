@@ -29,10 +29,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Chaintable/pipeline/tracer"
+	ptypes "github.com/Chaintable/pipeline/types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/scroll-tech/go-ethereum/core/tracing"
-	"github.com/scroll-tech/go-ethereum/debank/tracer"
-	ptypes "github.com/scroll-tech/go-ethereum/debank/types"
 
 	"github.com/scroll-tech/go-ethereum/common"
 	"github.com/scroll-tech/go-ethereum/common/mclock"
@@ -2600,7 +2600,7 @@ func (bc *BlockChain) pushBlockChange(block *types.Block) {
 		parent := bc.GetHeaderByHash(block.Header().ParentHash)
 
 		if parent.Root == block.Root() {
-			bc.logger.OnCommit(parent.Root, block.Root(), nil, nil, nil, nil)
+			bc.logger.OnCommit(parent.Root, block.Root(), nil, nil, nil, nil, nil, nil)
 		}
 
 		if blockChange != nil {
