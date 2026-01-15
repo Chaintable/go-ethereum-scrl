@@ -36,8 +36,8 @@ github.com/Azure/go-autorest/tracing v0.6.0 h1:TYi4+3m5t6K48TGI9AUdb+IzbnSxvnvUM
 github.com/Azure/go-autorest/tracing v0.6.0/go.mod h1:+vhtPC754Xsa23ID7GlGsrdKBpUA79WCAKPPZVC2DeU=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/Chaintable/pipeline v0.0.63-0.20251229090745-915c1be22b8e h1:5eifdE38IOA/EEnURZnz9NF0rSkMQKzXz5TmLFJjct4=
-github.com/Chaintable/pipeline v0.0.63-0.20251229090745-915c1be22b8e/go.mod h1:viU4zSFYPO+MymVi/3AQ5UWVjacDF4yQpWo+mc/XbyY=
+github.com/Chaintable/pipeline v0.0.62-scroll-v5.10.0 h1:dG2zqjefu2yZ4HZOKxIufNMMqV5HJk86P9VZmvI6HWY=
+github.com/Chaintable/pipeline v0.0.62-scroll-v5.10.0/go.mod h1:viU4zSFYPO+MymVi/3AQ5UWVjacDF4yQpWo+mc/XbyY=
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/VictoriaMetrics/fastcache v1.12.2 h1:N0y9ASrJ0F6h0QaC3o6uJb3NIZ9VKLjCM7NQbSmF7WI=
