@@ -393,7 +393,7 @@ func (s *stateObject) updateTrie(db Database) Trie {
 				// Retrieve the old storage map, if available, create a new one otherwise
 				if flatstorage = s.db.Storage[s.addrHash]; flatstorage == nil {
 					flatstorage = make(map[common.Hash][]byte)
-					s.db.Storage[s.addrHash] = storage
+					s.db.Storage[s.addrHash] = flatstorage
 				}
 			}
 			flatstorage[crypto.HashData(hasher, key[:])] = v // v will be nil if it's deleted
