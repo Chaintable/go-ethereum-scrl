@@ -121,7 +121,16 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
 		}
 		if pipelineTracer != nil {
-			receipt.SetEffectiveGasPrice(tx, vmenv.Context.BaseFee)
+			var gasPrice = new(big.Int)
+			if vmenv.ChainConfig().IsCurie(vmenv.Context.BlockNumber) {
+				gasPrice = tx.GasPrice()
+			} else {
+				gasPrice = new(big.Int).Add(vmenv.Context.BaseFee, tx.EffectiveGasTipValue(header.BaseFee))
+			}
+			if receipt.L1Fee != nil {
+				gasPrice = new(big.Int).Div(new(big.Int).Add(receipt.L1Fee, new(big.Int).Mul(receipt.EffectiveGasPrice, new(big.Int).SetUint64(gasUsed))), new(big.Int).SetUint64(gasUsed))
+			}
+			receipt.EffectiveGasPrice = gasPrice
 			pipelineTracer.OnTxEnd(receipt, err)
 		}
 		receipts = append(receipts, receipt)
