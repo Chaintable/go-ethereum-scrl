@@ -4,7 +4,7 @@ go 1.22.12
 
 require (
 	github.com/Azure/azure-storage-blob-go v0.7.0
-	github.com/Chaintable/pipeline v0.0.62-scroll-v5.10.0
+	github.com/Chaintable/pipeline v0.0.63-0.20260125170903-8d46823599cc
 	github.com/VictoriaMetrics/fastcache v1.12.2
 	github.com/agiledragon/gomonkey/v2 v2.12.0
 	github.com/aws/aws-sdk-go-v2 v1.36.5
