@@ -122,13 +122,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		}
 		if pipelineTracer != nil {
 			var gasPrice = new(big.Int)
-			if vmenv.ChainConfig().IsCurie(vmenv.Context.BlockNumber) {
+			if !vmenv.ChainConfig().IsCurie(vmenv.Context.BlockNumber) {
 				gasPrice = tx.GasPrice()
 			} else {
-				gasPrice = new(big.Int).Add(vmenv.Context.BaseFee, tx.EffectiveGasTipValue(header.BaseFee))
+				gasPrice = new(big.Int).Add(vmenv.Context.BaseFee, tx.EffectiveGasTipValue(vmenv.Context.BaseFee))
 			}
 			if receipt.L1Fee != nil {
-				gasPrice = new(big.Int).Div(new(big.Int).Add(receipt.L1Fee, new(big.Int).Mul(receipt.EffectiveGasPrice, new(big.Int).SetUint64(gasUsed))), new(big.Int).SetUint64(gasUsed))
+				gasPrice = new(big.Int).Div(new(big.Int).Add(receipt.L1Fee, new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(receipt.GasUsed))), new(big.Int).SetUint64(receipt.GasUsed))
 			}
 			receipt.EffectiveGasPrice = gasPrice
 			pipelineTracer.OnTxEnd(receipt, err)
