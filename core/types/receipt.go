@@ -81,10 +81,6 @@ type Receipt struct {
 	L1Fee *big.Int `json:"l1Fee,omitempty"`
 }
 
-func (r *Receipt) SetEffectiveGasPrice(tx *Transaction, baseFee *big.Int) {
-	r.EffectiveGasPrice = tx.EffectiveGasTipValue(baseFee)
-}
-
 type receiptMarshaling struct {
 	Type              hexutil.Uint64
 	PostState         hexutil.Bytes

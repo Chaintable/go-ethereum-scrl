@@ -341,7 +341,7 @@ func (s *stateObject) updateTrie(db Database) Trie {
 	}
 	// The snapshot storage map for the object
 	var storage map[common.Hash][]byte
-	var flatstorage map[common.Hash][]byte
+	var flatstorage map[common.Hash]common.Hash
 	// Insert all the pending updates into the trie
 	tr := s.getTrie(db)
 	hasher := s.db.hasher
@@ -357,6 +357,7 @@ func (s *stateObject) updateTrie(db Database) Trie {
 	usedStorage := make([][]byte, 0, len(s.pendingStorage))
 	for _, key := range sortedPendingStorages {
 		value := s.pendingStorage[key]
+		originValue := common.BytesToHash(value.Bytes())
 		// Skip noop changes, persist actual changes
 		if value == s.originStorage[key] {
 			continue
@@ -392,11 +393,11 @@ func (s *stateObject) updateTrie(db Database) Trie {
 			if flatstorage == nil {
 				// Retrieve the old storage map, if available, create a new one otherwise
 				if flatstorage = s.db.Storage[s.addrHash]; flatstorage == nil {
-					flatstorage = make(map[common.Hash][]byte)
-					s.db.Storage[s.addrHash] = storage
+					flatstorage = make(map[common.Hash]common.Hash)
+					s.db.Storage[s.addrHash] = flatstorage
 				}
 			}
-			flatstorage[crypto.HashData(hasher, key[:])] = v // v will be nil if it's deleted
+			flatstorage[crypto.HashData(hasher, key[:])] = originValue // v will be nil if it's deleted
 		}
 		usedStorage = append(usedStorage, common.CopyBytes(key[:])) // Copy needed for closure
 	}

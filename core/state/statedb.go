@@ -135,7 +135,7 @@ type StateDB struct {
 	hooks     *tracing.Hooks
 	Destructs map[common.Hash]struct{}
 	Accounts  map[common.Hash][]byte
-	Storage   map[common.Hash]map[common.Hash][]byte
+	Storage   map[common.Hash]map[common.Hash]common.Hash
 	diskRoot  *common.Hash
 }
 
@@ -161,7 +161,7 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		hasher:              crypto.NewKeccakState(),
 		Destructs:           make(map[common.Hash]struct{}),
 		Accounts:            make(map[common.Hash][]byte),
-		Storage:             make(map[common.Hash]map[common.Hash][]byte),
+		Storage:             make(map[common.Hash]map[common.Hash]common.Hash),
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -861,9 +861,9 @@ func (s *StateDB) Copy() *StateDB {
 	for k, v := range s.Accounts {
 		state.Accounts[k] = v
 	}
-	state.Storage = make(map[common.Hash]map[common.Hash][]byte)
+	state.Storage = make(map[common.Hash]map[common.Hash]common.Hash)
 	for k, v := range s.Storage {
-		temp := make(map[common.Hash][]byte)
+		temp := make(map[common.Hash]common.Hash)
 		for kk, vv := range v {
 			temp[kk] = vv
 		}
