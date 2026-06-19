@@ -93,7 +93,7 @@ jobs:
         run: |
           docker buildx imagetools create --tag ${REGISTRY}/${IMAGE}:${REVISION} ${REGISTRY}/${IMAGE}:amd64-${REVISION} ${REGISTRY}/${IMAGE}:arm64-${REVISION}
 
-      - name: Lark Notification
-        continue-on-error: true
-        run: |
-          notiv3 "Blockchain scrl image pushed 🎉" ${REGISTRY}/${IMAGE}:${REVISION}
+      # - name: Lark Notification
+      #   continue-on-error: true
+      #   run: |
+      #     notiv3 "Blockchain scrl image pushed 🎉" ${REGISTRY}/${IMAGE}:${REVISION}
