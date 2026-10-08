@@ -44,6 +44,8 @@ github.com/Chaintable/pipeline v0.0.62-scroll-v5.10.0-debank-5 h1:JPFKqUCRZIL+KP
 github.com/Chaintable/pipeline v0.0.62-scroll-v5.10.0-debank-5/go.mod h1:viU4zSFYPO+MymVi/3AQ5UWVjacDF4yQpWo+mc/XbyY=
 github.com/Chaintable/pipeline v0.0.63-0.20260910043525-edd25e7f2a07 h1:BxHMpkOalUW7+EcdYv3Za6wl8DJWlaWRS2tB+zyIxIc=
 github.com/Chaintable/pipeline v0.0.63-0.20260910043525-edd25e7f2a07/go.mod h1:viU4zSFYPO+MymVi/3AQ5UWVjacDF4yQpWo+mc/XbyY=
+github.com/Chaintable/pipeline v0.0.63-0.20261008105701-a3b7c1168b87 h1:l04e7+395cCa3S+Km2sktV/3GuwzFnYD/mYbIqO8mg4=
+github.com/Chaintable/pipeline v0.0.63-0.20261008105701-a3b7c1168b87/go.mod h1:viU4zSFYPO+MymVi/3AQ5UWVjacDF4yQpWo+mc/XbyY=
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/VictoriaMetrics/fastcache v1.12.2 h1:N0y9ASrJ0F6h0QaC3o6uJb3NIZ9VKLjCM7NQbSmF7WI=
